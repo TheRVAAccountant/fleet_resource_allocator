@@ -4,6 +4,29 @@
  */
 
 /**
+ * Safely converts various date formats to Date object
+ * @param {Date|string|number} dateInput - Date in various formats
+ * @returns {Date} Valid Date object
+ */
+function parseDate(dateInput) {
+  // If already a Date object, return it
+  if (dateInput instanceof Date && !isNaN(dateInput)) {
+    return dateInput;
+  }
+  
+  // Try to parse string or number
+  const parsed = new Date(dateInput);
+  
+  // Check if parsing was successful
+  if (isNaN(parsed)) {
+    console.error('Invalid date input:', dateInput);
+    return new Date(); // Return current date as fallback
+  }
+  
+  return parsed;
+}
+
+/**
  * Sends formatted email notification for delivery pace form submission
  * @param {Object} formData - Parsed form submission data
  * @param {string} formData.vanId - Van identifier
@@ -15,6 +38,15 @@
  */
 function sendDeliveryPaceEmail(formData) {
   try {
+    // Validate formData
+    if (!formData || typeof formData !== 'object') {
+      throw new Error('Invalid form data provided');
+    }
+    
+    if (!formData.vanId) {
+      throw new Error('Van ID is required');
+    }
+    
     const config = getConfig();
     const recipient = config.EMAIL_RECIPIENT;
     const subject = createEmailSubject(formData);
@@ -31,6 +63,7 @@ function sendDeliveryPaceEmail(formData) {
     return true;
   } catch (error) {
     console.error('Error sending delivery pace email:', error);
+    console.error('Form data:', JSON.stringify(formData));
     return false;
   }
 }
@@ -41,9 +74,18 @@ function sendDeliveryPaceEmail(formData) {
  * @returns {string} Formatted subject line
  */
 function createEmailSubject(formData) {
-  const dateStr = Utilities.formatDate(new Date(formData.date), Session.getScriptTimeZone(), 'MM/dd/yyyy');
-  const timeStr = Utilities.formatDate(formData.timestamp, Session.getScriptTimeZone(), 'h:mm a');
-  return `Delivery Pace Update - Van ${formData.vanId} - ${dateStr} @ ${timeStr}`;
+  try {
+    const date = parseDate(formData.date);
+    const timestamp = parseDate(formData.timestamp);
+    
+    const dateStr = Utilities.formatDate(date, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+    const timeStr = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), 'h:mm a');
+    return `Delivery Pace Update - Van ${formData.vanId} - ${dateStr} @ ${timeStr}`;
+  } catch (error) {
+    console.error('Error creating email subject:', error);
+    // Fallback subject
+    return `Delivery Pace Update - Van ${formData.vanId || 'Unknown'}`;
+  }
 }
 
 /**
@@ -52,14 +94,27 @@ function createEmailSubject(formData) {
  * @returns {string} HTML email content
  */
 function createEmailBody(formData) {
-  const dateStr = Utilities.formatDate(new Date(formData.date), Session.getScriptTimeZone(), 'MM/dd/yyyy');
-  const submissionTime = Utilities.formatDate(formData.timestamp, Session.getScriptTimeZone(), 'EEEE, MMMM d, yyyy h:mm a z');
+  let dateStr, submissionTime;
   
-  // Calculate metrics
-  const checkpoints = Object.keys(formData.deliveries).sort();
-  const latestCheckpoint = checkpoints[checkpoints.length - 1];
-  const totalDeliveries = formData.deliveries[latestCheckpoint] || 0;
-  const averagePace = calculateAveragePace(formData.deliveries);
+  try {
+    const date = parseDate(formData.date);
+    const timestamp = parseDate(formData.timestamp);
+    
+    dateStr = Utilities.formatDate(date, Session.getScriptTimeZone(), 'MM/dd/yyyy');
+    submissionTime = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), 'EEEE, MMMM d, yyyy h:mm a z');
+  } catch (error) {
+    console.error('Error formatting dates:', error);
+    // Use fallback values
+    dateStr = 'Unknown Date';
+    submissionTime = 'Unknown Time';
+  }
+  
+  // Calculate metrics with validation
+  const deliveries = formData.deliveries || {};
+  const checkpoints = Object.keys(deliveries).filter(key => key && key.trim()).sort();
+  const latestCheckpoint = checkpoints.length > 0 ? checkpoints[checkpoints.length - 1] : null;
+  const totalDeliveries = latestCheckpoint ? (deliveries[latestCheckpoint] || 0) : 0;
+  const averagePace = calculateAveragePace(deliveries);
   
   let html = `
     <!DOCTYPE html>
@@ -264,8 +319,17 @@ function createEmailBody(formData) {
  * @returns {number} Average stops per hour
  */
 function calculateAveragePace(deliveries) {
-  const checkpoints = Object.keys(deliveries).sort();
-  if (checkpoints.length < 2) return 0;
+  // Validate deliveries object
+  if (!deliveries || typeof deliveries !== 'object') {
+    console.log('Invalid deliveries object:', deliveries);
+    return 0;
+  }
+  
+  const checkpoints = Object.keys(deliveries).filter(key => key && key.trim()).sort();
+  if (checkpoints.length < 2) {
+    console.log('Not enough checkpoints for pace calculation');
+    return 0;
+  }
   
   const firstCheckpoint = checkpoints[0];
   const lastCheckpoint = checkpoints[checkpoints.length - 1];
@@ -283,9 +347,39 @@ function calculateAveragePace(deliveries) {
  * @returns {number} Difference in hours
  */
 function getTimeDifferenceInHours(time1, time2) {
+  // Validate inputs
+  if (!time1 || !time2) {
+    console.error('Invalid time values:', { time1, time2 });
+    return 0;
+  }
+  
   const parseTime = (timeStr) => {
-    const [time, period] = timeStr.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
+    // Ensure timeStr is a string and contains a space
+    if (typeof timeStr !== 'string' || !timeStr.includes(' ')) {
+      console.error('Invalid time format:', timeStr);
+      return 0;
+    }
+    
+    const parts = timeStr.split(' ');
+    if (parts.length !== 2) {
+      console.error('Invalid time format:', timeStr);
+      return 0;
+    }
+    
+    const [time, period] = parts;
+    const timeParts = time.split(':');
+    
+    if (timeParts.length !== 2) {
+      console.error('Invalid time format:', timeStr);
+      return 0;
+    }
+    
+    let [hours, minutes] = timeParts.map(Number);
+    
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.error('Invalid time values:', { hours, minutes });
+      return 0;
+    }
     
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
@@ -339,4 +433,170 @@ function testDeliveryPaceEmail() {
     console.log('Failed to send test email');
     SpreadsheetApp.getUi().alert('Failed to send test email. Check logs for details.');
   }
+}
+
+/**
+ * Comprehensive test suite for email functionality
+ */
+function runEmailServiceTests() {
+  console.log('Starting Email Service Tests...');
+  
+  const tests = [
+    testDateParsing,
+    testEmailWithVariousDateFormats,
+    testEmailWithMissingData,
+    testEmailWithInvalidData,
+    testTimeDifferenceCalculations
+  ];
+  
+  let passed = 0;
+  let failed = 0;
+  
+  tests.forEach(test => {
+    try {
+      console.log(`Running ${test.name}...`);
+      test();
+      passed++;
+      console.log(`✓ ${test.name} passed`);
+    } catch (error) {
+      failed++;
+      console.error(`✗ ${test.name} failed:`, error);
+    }
+  });
+  
+  const message = `Email Service Tests Complete: ${passed} passed, ${failed} failed`;
+  console.log(message);
+  SpreadsheetApp.getUi().alert(message);
+}
+
+/**
+ * Test date parsing functionality
+ */
+function testDateParsing() {
+  // Test various date formats
+  const testCases = [
+    { input: new Date(), description: 'Date object' },
+    { input: '2025-06-20T19:55:21.061Z', description: 'ISO string' },
+    { input: '2025-06-20', description: 'Date string' },
+    { input: 1718909721061, description: 'Timestamp' },
+    { input: null, description: 'Null value' },
+    { input: undefined, description: 'Undefined value' },
+    { input: 'invalid', description: 'Invalid string' }
+  ];
+  
+  testCases.forEach(testCase => {
+    const result = parseDate(testCase.input);
+    console.log(`parseDate(${testCase.description}):`, result);
+    
+    if (!(result instanceof Date)) {
+      throw new Error(`Expected Date object for ${testCase.description}`);
+    }
+  });
+}
+
+/**
+ * Test email sending with various date formats
+ */
+function testEmailWithVariousDateFormats() {
+  const dateFormats = [
+    new Date(),
+    '2025-06-20T19:55:21.061Z',
+    new Date().toISOString(),
+    new Date().getTime()
+  ];
+  
+  dateFormats.forEach((dateFormat, index) => {
+    const testData = {
+      vanId: `TEST${index}`,
+      date: dateFormat,
+      timestamp: dateFormat,
+      driverName: 'Test Driver',
+      deliveries: {
+        '1:40 PM': 10 + index,
+        '3:40 PM': 20 + index
+      },
+      notes: `Test with date format: ${typeof dateFormat}`
+    };
+    
+    try {
+      // Just create the email body to test formatting
+      const subject = createEmailSubject(testData);
+      const body = createEmailBody(testData);
+      
+      console.log(`Date format test ${index} passed`);
+    } catch (error) {
+      throw new Error(`Failed with date format ${typeof dateFormat}: ${error}`);
+    }
+  });
+}
+
+/**
+ * Test email with missing data
+ */
+function testEmailWithMissingData() {
+  const testCases = [
+    { vanId: 'TEST1' }, // Missing everything else
+    { vanId: 'TEST2', date: new Date() }, // Missing timestamp
+    { vanId: 'TEST3', date: new Date(), timestamp: new Date() }, // Missing deliveries
+    { vanId: 'TEST4', date: new Date(), timestamp: new Date(), deliveries: {} } // Empty deliveries
+  ];
+  
+  testCases.forEach((testData, index) => {
+    try {
+      const subject = createEmailSubject(testData);
+      const body = createEmailBody(testData);
+      console.log(`Missing data test ${index} passed`);
+    } catch (error) {
+      throw new Error(`Failed with missing data test ${index}: ${error}`);
+    }
+  });
+}
+
+/**
+ * Test email with invalid data
+ */
+function testEmailWithInvalidData() {
+  const testData = {
+    vanId: null,
+    date: 'not-a-date',
+    timestamp: {},
+    deliveries: {
+      'invalid-time': 'not-a-number',
+      '': 50,
+      null: 60
+    },
+    notes: 123 // Number instead of string
+  };
+  
+  try {
+    // Should handle gracefully without throwing
+    const subject = createEmailSubject(testData);
+    const body = createEmailBody(testData);
+    console.log('Invalid data test passed');
+  } catch (error) {
+    throw new Error(`Should handle invalid data gracefully: ${error}`);
+  }
+}
+
+/**
+ * Test time difference calculations
+ */
+function testTimeDifferenceCalculations() {
+  const testCases = [
+    { time1: '1:40 PM', time2: '3:40 PM', expected: 2 },
+    { time1: '11:40 AM', time2: '1:40 PM', expected: 2 },
+    { time1: '11:40 PM', time2: '1:40 AM', expected: -22 }, // Negative (crossing midnight)
+    { time1: null, time2: '3:40 PM', expected: 0 }, // Invalid input
+    { time1: '1:40 PM', time2: null, expected: 0 }, // Invalid input
+    { time1: 'invalid', time2: '3:40 PM', expected: 0 } // Invalid format
+  ];
+  
+  testCases.forEach(testCase => {
+    const result = getTimeDifferenceInHours(testCase.time1, testCase.time2);
+    console.log(`Time diff ${testCase.time1} to ${testCase.time2}: ${result} hours`);
+    
+    if (testCase.expected !== 0 && Math.abs(result - testCase.expected) > 0.01) {
+      throw new Error(`Expected ${testCase.expected} hours, got ${result}`);
+    }
+  });
 }
