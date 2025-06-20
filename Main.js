@@ -35,6 +35,7 @@ function onOpen() {
     .addSeparator()
     .addItem("Setup Auto-Update Triggers", "setupDeliveryPaceTriggers")
     .addItem("Test Update", "testDeliveryPaceUpdate")
+    .addItem("Test Email Notification", "testDeliveryPaceEmail")
     .addToUi();
 }
 

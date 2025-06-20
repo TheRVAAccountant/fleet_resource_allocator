@@ -54,7 +54,10 @@ var CONFIG = {
     UPLOAD_DIALOG_HEIGHT: 650,
     UPDATE_VAN_DIALOG_WIDTH: 400,
     UPDATE_VAN_DIALOG_HEIGHT: 300
-  }
+  },
+  
+  // Email Settings
+  EMAIL_RECIPIENT: "info@thervaaccountant.com"
 };
 
 /**

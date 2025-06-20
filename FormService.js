@@ -331,6 +331,28 @@ function onDeliveryPaceFormSubmit(e) {
     // Update the Daily Details sheet
     updateDailyDetailsFromForm(formData);
     
+    // Prepare email data
+    var emailData = {
+      vanId: formData['Van ID'],
+      date: formData['Date'],
+      timestamp: response.getTimestamp(),
+      driverName: formData['Driver Name'] || 'Not specified',
+      deliveries: {},
+      notes: formData['Notes (Optional)'] || ''
+    };
+    
+    // Add delivery count for the reporting time
+    emailData.deliveries[formData['Reporting Time']] = formData['Total Deliveries Completed'];
+    
+    // Send email notification
+    var emailSent = sendDeliveryPaceEmail(emailData);
+    
+    if (emailSent) {
+      Logger.log('Email notification sent for Van: ' + formData['Van ID']);
+    } else {
+      Logger.log('Failed to send email notification for Van: ' + formData['Van ID']);
+    }
+    
     Logger.log('Processed delivery pace form submission for Van: ' + formData['Van ID']);
     
   } catch (error) {
@@ -619,6 +641,27 @@ function submitDeliveryPaceReport(formData) {
       'Reporting Time': formData.reportingTime,
       'Total Deliveries Completed': formData.deliveryCount
     });
+    
+    // Send email notification
+    var emailData = {
+      vanId: formData.vanId,
+      date: formData.date,
+      timestamp: timestamp,
+      driverName: formData.driverName || 'Not specified',
+      deliveries: {},
+      notes: formData.notes || ''
+    };
+    
+    // Add delivery count for the reporting time
+    emailData.deliveries[formData.reportingTime] = formData.deliveryCount;
+    
+    var emailSent = sendDeliveryPaceEmail(emailData);
+    
+    if (emailSent) {
+      Logger.log('Email notification sent for Van: ' + formData.vanId);
+    } else {
+      Logger.log('Failed to send email notification for Van: ' + formData.vanId);
+    }
     
     Logger.log('Delivery pace report submitted for Van: ' + formData.vanId);
     
