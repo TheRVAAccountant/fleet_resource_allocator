@@ -1,0 +1,33 @@
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Logs
+logs/
+*.log
+
+# Excel temporary files
+~$*.xlsx
+~$*.xls
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node modules (if using clasp with npm)
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Backup files
+*.backup
+*.bak

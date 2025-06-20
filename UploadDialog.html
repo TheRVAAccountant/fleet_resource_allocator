@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      label {
+        font-weight: bold;
+      }
+      #progressContainer {
+        margin-top: 10px;
+        width: 100%;
+        background-color: #f3f3f3;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      #progressBar {
+        width: 0%;
+        height: 20px;
+        background-color: #4CAF50;
+        text-align: center;
+        line-height: 20px;
+        color: white;
+        transition: width 0.4s ease;
+      }
+      #status {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Select XLSX Files</h3>
+    <form id="uploadForm">
+      <div>
+        <label for="dayOfOpsFile">Day of Ops XLSX File:</label><br>
+        <input type="file" id="dayOfOpsFile" accept=".xlsx" required>
+      </div>
+      <br>
+      <div>
+        <label for="dailyRoutesFile">Daily Routes XLSX File:</label><br>
+        <input type="file" id="dailyRoutesFile" accept=".xlsx" required>
+      </div>
+      <br>
+      <input type="submit" value="Upload and Run Allocation">
+    </form>
+    <div id="progressContainer">
+      <div id="progressBar">0%</div>
+    </div>
+    <div id="status"></div>
+    <script>
+      // Helper to update the progress bar and status message.
+      function updateProgress(percent, message) {
+        var progressBar = document.getElementById('progressBar');
+        progressBar.style.width = percent + '%';
+        progressBar.textContent = percent + '%';
+        if (message) {
+          document.getElementById('status').innerText = message;
+        }
+      }
+
+      document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        updateProgress(0, "Starting upload...");
+        // Get the selected files.
+        var dayFile = document.getElementById('dayOfOpsFile').files[0];
+        var routesFile = document.getElementById('dailyRoutesFile').files[0];
+        
+        if (!dayFile || !routesFile) {
+          updateProgress(0, "Both files are required.");
+          return;
+        }
+        
+        // Create two FileReaders for each file.
+        var reader1 = new FileReader();
+        var reader2 = new FileReader();
+        var dayFileData, routesFileData;
+        
+        reader1.onprogress = function(e) {
+          if (e.lengthComputable) {
+            // Use first 50% of the progress for day file reading.
+            var percentLoaded = Math.round((e.loaded / e.total) * 50);
+            updateProgress(percentLoaded, "Reading Day of Ops file...");
+          }
+        };
+        reader1.onload = function(e) {
+          dayFileData = e.target.result;
+          updateProgress(50, "Day file loaded. Waiting for Routes file...");
+          checkAndUpload();
+        };
+        
+        reader2.onprogress = function(e) {
+          if (e.lengthComputable) {
+            // Use next 25% (50-75%) for routes file reading.
+            var percentLoaded = 50 + Math.round((e.loaded / e.total) * 25);
+            updateProgress(percentLoaded, "Reading Daily Routes file...");
+          }
+        };
+        reader2.onload = function(e) {
+          routesFileData = e.target.result;
+          updateProgress(75, "Both files loaded. Starting upload...");
+          checkAndUpload();
+        };
+        
+        reader1.readAsDataURL(dayFile);
+        reader2.readAsDataURL(routesFile);
+        
+        // When both files have been read, proceed to upload.
+        function checkAndUpload() {
+          if (dayFileData && routesFileData) {
+            // Upload the Day of Ops file first.
+            google.script.run.withSuccessHandler(function(dayOfOpsId) {
+              updateProgress(85, "Day file uploaded. Uploading Routes file...");
+              // Then upload the Daily Routes file.
+              google.script.run.withSuccessHandler(function(dailyRoutesId) {
+                updateProgress(95, "Both files uploaded. Running allocation...");
+                // Run the allocation process.
+                google.script.run.withSuccessHandler(function(){
+                  updateProgress(100, "Allocation completed successfully.");
+                }).runAllocation(dayOfOpsId, dailyRoutesId);
+              }).uploadAndConvertXLSX(routesFileData, routesFile.name);
+            }).uploadAndConvertXLSX(dayFileData, dayFile.name);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
