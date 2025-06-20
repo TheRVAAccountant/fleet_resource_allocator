@@ -54,7 +54,7 @@
       
       .file-input-wrapper {
         position: relative;
-        overflow: hidden;
+        overflow: visible;
         border: 2px dashed #dadce0;
         border-radius: 8px;
         padding: 32px;
@@ -62,6 +62,8 @@
         transition: all 0.3s ease;
         cursor: pointer;
         background-color: #f8f9fa;
+        display: block;
+        min-height: 120px;
       }
       
       .file-input-wrapper:hover {
@@ -77,7 +79,11 @@
       
       .file-input-wrapper input[type="file"] {
         position: absolute;
-        left: -9999px;
+        width: 0.1px;
+        height: 0.1px;
+        opacity: 0;
+        overflow: hidden;
+        z-index: -1;
       }
       
       .file-icon {
@@ -116,6 +122,8 @@
       .file-hint {
         font-size: 12px;
         color: #5f6368;
+        display: block;
+        margin-top: 4px;
       }
       
       .file-name {
