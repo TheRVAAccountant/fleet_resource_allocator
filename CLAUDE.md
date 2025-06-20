@@ -286,3 +286,42 @@ The Delivery Pace menu provides:
 3. Manual updates available via "Update Today's Pace"
 4. Generate summaries with "Generate Today's Summary"
 5. Update individual vans through the dialog interface
+
+## Smart Form Van Filtering Enhancement
+
+The delivery pace form has been enhanced to intelligently filter the Van ID dropdown to show only vans that are assigned for the current day. This reduces errors and improves the user experience.
+
+### Key Features
+- **Filtered Dropdown**: Shows only vans with assignments for today
+- **Auto-Selection**: If only one van is assigned, it's automatically selected
+- **Visual Feedback**: Displays "Showing only vans assigned today" message
+- **Fallback Logic**: Shows all operational vans if no assignments exist yet
+- **Configurable**: Can be enabled/disabled via configuration
+
+### Configuration
+In Config.js:
+```javascript
+FORM_SETTINGS: {
+  FILTER_VANS_BY_ASSIGNMENT: true  // Set to false to show all operational vans
+}
+```
+
+### How It Works
+1. When the form loads, it queries Daily Details for today's assignments
+2. Extracts unique van IDs that have been assigned routes
+3. Populates the dropdown with only these vans
+4. If no vans are assigned, falls back to showing all operational vans
+
+### Testing
+To test the filtering:
+1. Go to "Delivery Pace" → "Form Management" → "Test Van Filtering"
+2. The test will show:
+   - Number of vans assigned today
+   - Number shown in filtered dropdown
+   - Total operational vans available
+
+### Benefits
+- **Reduced Errors**: Drivers can't accidentally select unassigned vans
+- **Faster Selection**: Fewer options to choose from
+- **Better UX**: Clear indication of what vans are available
+- **Smart Defaults**: Auto-selects when only one option exists

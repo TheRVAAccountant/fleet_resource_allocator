@@ -146,9 +146,21 @@ function createDeliveryPaceForm() {
 
 /**
  * Get list of active vans from Vehicle Status
+ * @param {boolean} onlyAssigned - If true, only return vans assigned today
  * @return {string[]} Array of van IDs
  */
-function getActiveVanChoices() {
+function getActiveVanChoices(onlyAssigned = true) {
+  // First, get today's assigned vans if filtering is enabled
+  if (onlyAssigned) {
+    var assignedVans = getTodaysAssignedVans();
+    if (assignedVans.length > 0) {
+      return assignedVans;
+    }
+    // If no vans are assigned today, fall back to all operational vans
+    Logger.log('No vans assigned today, showing all operational vans');
+  }
+  
+  // Get all operational vans
   var ss = SpreadsheetApp.openById(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'));
   var vehicleSheet = ss.getSheetByName(getConfig('SHEETS.VEHICLE_STATUS'));
   
@@ -180,6 +192,27 @@ function getActiveVanChoices() {
   }
   
   return vanIds.length > 0 ? vanIds : ['BW1', 'BW2', 'BW3', 'BW4', 'BW5'];
+}
+
+/**
+ * Get list of vans assigned for today from Daily Details
+ * @return {string[]} Array of van IDs assigned today
+ */
+function getTodaysAssignedVans() {
+  try {
+    var assignments = getTodayAssignments();
+    var assignedVans = Object.keys(assignments);
+    
+    // Sort the van IDs for consistent ordering
+    assignedVans.sort();
+    
+    Logger.log('Vans assigned today: ' + assignedVans.join(', '));
+    return assignedVans;
+    
+  } catch (error) {
+    Logger.log('Error getting today\'s assigned vans: ' + error);
+    return [];
+  }
 }
 
 /**
@@ -587,13 +620,32 @@ function doGet() {
 
 /**
  * Get form data for dropdowns
+ * @param {boolean} filterVans - Whether to filter vans to only those assigned today (overrides config)
  * @return {Object} Form data including vans, routes, and assignments
  */
-function getFormData() {
+function getFormData(filterVans = null) {
+  // Use config setting if not explicitly provided
+  if (filterVans === null) {
+    filterVans = getConfig('FORM_SETTINGS.FILTER_VANS_BY_ASSIGNMENT');
+  }
+  
+  var assignments = getTodayAssignments();
+  var vans = getActiveVanChoices(filterVans);
+  
+  // Add helpful message if showing filtered vans
+  var vanMessage = '';
+  if (filterVans && vans.length > 0) {
+    vanMessage = 'Showing only vans assigned today';
+  } else if (filterVans && vans.length === 0) {
+    vanMessage = 'No vans assigned today - showing all operational vans';
+    vans = getActiveVanChoices(false); // Get all operational vans as fallback
+  }
+  
   return {
-    vans: getActiveVanChoices(),
+    vans: vans,
     routes: getTodayRouteChoices(),
-    assignments: getTodayAssignments()
+    assignments: assignments,
+    vanMessage: vanMessage
   };
 }
 
@@ -673,5 +725,67 @@ function submitDeliveryPaceReport(formData) {
   } catch (error) {
     Logger.log('Error submitting delivery pace report: ' + error);
     throw error;
+  }
+}
+
+/**
+ * Test function to verify van filtering enhancement
+ */
+function testVanFiltering() {
+  console.log('=== Testing Van Filtering Enhancement ===');
+  
+  try {
+    // Test 1: Get all assigned vans
+    console.log('\nTest 1: Getting today\'s assigned vans...');
+    var assignedVans = getTodaysAssignedVans();
+    console.log('Assigned vans today:', assignedVans);
+    
+    // Test 2: Get filtered van choices
+    console.log('\nTest 2: Getting filtered van choices...');
+    var filteredVans = getActiveVanChoices(true);
+    console.log('Filtered van choices:', filteredVans);
+    
+    // Test 3: Get all operational vans
+    console.log('\nTest 3: Getting all operational vans...');
+    var allVans = getActiveVanChoices(false);
+    console.log('All operational vans:', allVans);
+    
+    // Test 4: Get form data with filtering
+    console.log('\nTest 4: Getting form data with filtering...');
+    var formDataFiltered = getFormData(true);
+    console.log('Form data (filtered):', {
+      vanCount: formDataFiltered.vans.length,
+      message: formDataFiltered.vanMessage,
+      vans: formDataFiltered.vans
+    });
+    
+    // Test 5: Get form data without filtering
+    console.log('\nTest 5: Getting form data without filtering...');
+    var formDataAll = getFormData(false);
+    console.log('Form data (all vans):', {
+      vanCount: formDataAll.vans.length,
+      message: formDataAll.vanMessage,
+      vans: formDataAll.vans
+    });
+    
+    // Summary
+    console.log('\n=== Test Summary ===');
+    console.log('Configuration setting:', getConfig('FORM_SETTINGS.FILTER_VANS_BY_ASSIGNMENT'));
+    console.log('Assigned vans today:', assignedVans.length);
+    console.log('Filtered dropdown shows:', filteredVans.length, 'vans');
+    console.log('Unfiltered dropdown shows:', allVans.length, 'vans');
+    
+    SpreadsheetApp.getUi().alert(
+      'Van Filtering Test Complete',
+      'Assigned vans: ' + assignedVans.length + '\n' +
+      'Filtered dropdown: ' + filteredVans.length + ' vans\n' +
+      'All operational: ' + allVans.length + ' vans\n\n' +
+      'Check logs for details.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+    SpreadsheetApp.getUi().alert('Test failed: ' + error.toString());
   }
 }

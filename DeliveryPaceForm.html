@@ -140,7 +140,7 @@
         <select id="vanId" name="vanId" required>
           <option value="">Select your van...</option>
         </select>
-        <div class="help-text">Select your assigned van</div>
+        <div class="help-text" id="vanHelpText">Select your assigned van</div>
       </div>
       
       <div class="form-group">
@@ -246,6 +246,12 @@
           vanList = data.vans;
           routeList = data.routes;
           
+          // Update van help text if message provided
+          if (data.vanMessage) {
+            document.getElementById('vanHelpText').textContent = data.vanMessage;
+            document.getElementById('vanHelpText').style.fontWeight = 'bold';
+          }
+          
           // Populate van dropdown
           const vanSelect = document.getElementById('vanId');
           vanList.forEach(van => {
@@ -254,6 +260,12 @@
             option.textContent = van;
             vanSelect.appendChild(option);
           });
+          
+          // If only one van is assigned, auto-select it
+          if (vanList.length === 1) {
+            vanSelect.value = vanList[0];
+            handleVanChange(); // Auto-populate related fields
+          }
           
           // Populate route dropdown
           const routeSelect = document.getElementById('routeCode');

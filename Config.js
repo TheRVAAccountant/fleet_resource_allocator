@@ -57,7 +57,12 @@ var CONFIG = {
   },
   
   // Email Settings
-  EMAIL_RECIPIENT: "info@thervaaccountant.com"
+  EMAIL_RECIPIENT: "info@thervaaccountant.com",
+  
+  // Form Settings
+  FORM_SETTINGS: {
+    FILTER_VANS_BY_ASSIGNMENT: true  // If true, only show vans assigned today in forms
+  }
 };
 
 /**
