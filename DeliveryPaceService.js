@@ -108,6 +108,10 @@ function getDeliveryPaceDataFromForms(vanId, date) {
     }
     
     var data = dataSheet.getDataRange().getValues();
+    
+    // Log sheet info for debugging
+    console.log('Checking Delivery Pace Data sheet. Total rows:', data.length);
+    
     var paceData = {
       "1:40 PM": null,
       "3:40 PM": null,
@@ -115,6 +119,22 @@ function getDeliveryPaceDataFromForms(vanId, date) {
       "7:40 PM": null,
       "9:40 PM": null
     };
+    
+    // Validate headers
+    if (data.length > 0) {
+      var headers = data[0];
+      console.log('Sheet headers:', headers);
+      
+      // Verify expected columns exist
+      var expectedHeaders = ['Timestamp', 'Date', 'Van ID', 'Driver Name', 'Route Code', 'Reporting Time', 'Total Deliveries', 'Notes', 'Processed'];
+      var missingHeaders = expectedHeaders.filter(function(header, index) {
+        return headers[index] !== header;
+      });
+      
+      if (missingHeaders.length > 0) {
+        console.log('Warning: Missing or mismatched headers:', missingHeaders);
+      }
+    }
     
     // Headers: Timestamp, Date, Van ID, Driver Name, Route Code, Reporting Time, Total Deliveries, Notes, Processed
     for (var i = 1; i < data.length; i++) {
@@ -129,12 +149,27 @@ function getDeliveryPaceDataFromForms(vanId, date) {
       
       // Match van ID and date
       if (rowVanId === vanId && rowDate === date) {
+        // Ensure reportingTime is a string
+        if (reportingTime && typeof reportingTime !== 'string') {
+          console.log('Converting reportingTime to string. Type was:', typeof reportingTime, 'Value:', reportingTime);
+          reportingTime = String(reportingTime);
+        }
+        
+        // Skip if reportingTime is empty or invalid
+        if (!reportingTime || reportingTime.trim() === '') {
+          console.log('Skipping row with invalid reportingTime for Van:', vanId);
+          continue;
+        }
+        
         // Map reporting time to our standard format
         var timeKey = reportingTime.replace(' (End of Day)', '');
         
         if (paceData.hasOwnProperty(timeKey)) {
           // Keep the latest submission for each time slot
           paceData[timeKey] = deliveryCount;
+          console.log('Found pace data for Van ' + vanId + ' at ' + timeKey + ': ' + deliveryCount);
+        } else {
+          console.log('Unknown time slot:', timeKey, 'for Van:', vanId);
         }
       }
     }
@@ -152,6 +187,11 @@ function getDeliveryPaceDataFromForms(vanId, date) {
     
   } catch (error) {
     Logger.log("Error reading form data: " + error);
+    Logger.log("Error stack: " + error.stack);
+    // Log specific data that caused the error for debugging
+    if (typeof reportingTime !== 'undefined') {
+      Logger.log("reportingTime type: " + typeof reportingTime + ", value: " + reportingTime);
+    }
     return null;
   }
 }
@@ -499,4 +539,135 @@ function createDeliveryPaceSummarySheet(summary) {
   
   Logger.log("Created delivery pace summary sheet: " + summarySheetName);
   showInfoAlert("Delivery Pace Summary created: " + summarySheetName);
+}
+
+/**
+ * Test function to debug form data reading
+ */
+function testFormDataReading() {
+  console.log('=== Testing Form Data Reading ===');
+  
+  try {
+    var ss = SpreadsheetApp.openById(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'));
+    var dataSheet = ss.getSheetByName('Delivery Pace Data');
+    
+    if (!dataSheet) {
+      console.log('ERROR: Delivery Pace Data sheet not found');
+      SpreadsheetApp.getUi().alert('Delivery Pace Data sheet not found. Please create it first.');
+      return;
+    }
+    
+    var data = dataSheet.getDataRange().getValues();
+    console.log('Total rows in Delivery Pace Data sheet:', data.length);
+    
+    if (data.length === 0) {
+      console.log('Sheet is empty');
+      SpreadsheetApp.getUi().alert('Delivery Pace Data sheet is empty. Submit a form first.');
+      return;
+    }
+    
+    // Log headers
+    console.log('Headers:', data[0]);
+    
+    // Check first few data rows
+    var sampleSize = Math.min(5, data.length - 1);
+    console.log('Checking first', sampleSize, 'data rows...');
+    
+    for (var i = 1; i <= sampleSize; i++) {
+      if (i < data.length) {
+        var row = data[i];
+        console.log('\nRow', i, ':');
+        console.log('  Date:', row[1], 'Type:', typeof row[1]);
+        console.log('  Van ID:', row[2], 'Type:', typeof row[2]);
+        console.log('  Reporting Time:', row[5], 'Type:', typeof row[5]);
+        console.log('  Deliveries:', row[6], 'Type:', typeof row[6]);
+      }
+    }
+    
+    // Test reading data for a specific van
+    if (data.length > 1) {
+      var testVanId = data[1][2]; // Get van ID from first data row
+      var testDate = data[1][1];
+      
+      if (testDate instanceof Date) {
+        testDate = formatDate(testDate);
+      }
+      
+      console.log('\nTesting getDeliveryPaceDataFromForms for Van:', testVanId, 'Date:', testDate);
+      
+      var paceData = getDeliveryPaceDataFromForms(testVanId, testDate);
+      console.log('Result:', paceData);
+    }
+    
+    SpreadsheetApp.getUi().alert(
+      'Form Data Test Complete',
+      'Total rows: ' + data.length + '\n' +
+      'Check logs for detailed information.\n\n' +
+      'If you see reportingTime errors, check that the form is saving text values.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+    console.error('Stack:', error.stack);
+    SpreadsheetApp.getUi().alert('Test failed: ' + error.toString());
+  }
+}
+
+/**
+ * Create sample data in Delivery Pace Data sheet for testing
+ */
+function createSampleDeliveryPaceData() {
+  try {
+    var ss = SpreadsheetApp.openById(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'));
+    var dataSheet = ss.getSheetByName('Delivery Pace Data');
+    
+    if (!dataSheet) {
+      // Create the sheet if it doesn't exist
+      dataSheet = ss.insertSheet('Delivery Pace Data');
+      setupDeliveryPaceDataSheet(dataSheet);
+      console.log('Created Delivery Pace Data sheet');
+    }
+    
+    var today = new Date();
+    var timeSlots = ['1:40 PM', '3:40 PM', '5:40 PM', '7:40 PM', '9:40 PM (End of Day)'];
+    var sampleVans = ['BW2', 'BW10'];
+    
+    var sampleData = [];
+    
+    // Create sample data for each van and time slot
+    sampleVans.forEach(function(vanId) {
+      timeSlots.forEach(function(timeSlot, index) {
+        var deliveries = 20 + (index * 25) + Math.floor(Math.random() * 10);
+        sampleData.push([
+          new Date(), // Timestamp
+          today, // Date
+          vanId, // Van ID
+          'Test Driver', // Driver Name
+          'TEST001', // Route Code
+          timeSlot, // Reporting Time
+          deliveries, // Total Deliveries
+          'Test data', // Notes
+          'No' // Processed
+        ]);
+      });
+    });
+    
+    // Append the sample data
+    if (sampleData.length > 0) {
+      var lastRow = dataSheet.getLastRow();
+      dataSheet.getRange(lastRow + 1, 1, sampleData.length, sampleData[0].length).setValues(sampleData);
+      console.log('Added', sampleData.length, 'sample rows');
+    }
+    
+    SpreadsheetApp.getUi().alert(
+      'Sample Data Created',
+      'Added ' + sampleData.length + ' sample rows to Delivery Pace Data sheet.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    
+  } catch (error) {
+    console.error('Error creating sample data:', error);
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
 }

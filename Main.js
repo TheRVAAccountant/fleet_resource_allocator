@@ -39,6 +39,9 @@ function onOpen() {
     .addItem("Test Email Notification", "testDeliveryPaceEmail")
     .addItem("Debug Email Test", "debugTestDeliveryPaceEmail")
     .addItem("Run Email Tests", "runEmailServiceTests")
+    .addSeparator()
+    .addItem("Test Form Data Reading", "testFormDataReading")
+    .addItem("Create Sample Form Data", "createSampleDeliveryPaceData")
     .addToUi();
 }
 
