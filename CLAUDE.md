@@ -14,6 +14,7 @@ The codebase is organized into separate modules following Google Apps Script bes
 - **Main.js**: Entry points, menu setup, and initialization
 - **AllocationService.js**: Vehicle allocation business logic
 - **DeliveryPaceService.js**: Delivery pace tracking functionality
+- **FormService.js**: Google Forms integration for pace data collection
 - **SheetService.js**: Google Sheets operations and data management
 - **UIService.js**: User interface handlers and dialogs
 - **Utils.js**: Utility functions and helpers
@@ -231,25 +232,44 @@ Each column tracks the cumulative number of stops completed by that time.
   - Average stops by time period
   - Individual van performance details
 
-### Integration Points
-The `getDeliveryPaceData()` function is designed for easy integration with real data sources:
+### Data Collection via Google Forms
 
-1. **Google Sheets Integration**
-   ```javascript
-   var dataSpreadsheetId = "YOUR_DATA_SOURCE_ID";
-   var dataSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName("DeliveryData");
-   ```
+The system now includes a comprehensive form-based data collection system for drivers to report their delivery progress:
 
-2. **API Integration**
-   ```javascript
-   var apiUrl = "https://your-api.com/delivery-pace/" + vanId + "/" + date;
-   var response = UrlFetchApp.fetch(apiUrl, {headers: {'Authorization': 'Bearer TOKEN'}});
-   ```
+#### Form Features
+- **Mobile-Friendly**: Optimized for smartphone use
+- **Pre-populated Fields**: Van IDs loaded from Vehicle Status
+- **Time Checkpoints**: All 5 daily reporting times
+- **Validation**: Ensures numeric delivery counts
+- **Optional Notes**: Drivers can report issues
 
-3. **Database Integration**
-   ```javascript
-   var conn = Jdbc.getConnection("jdbc:mysql://host:3306/db", "user", "pass");
-   ```
+#### Form Management (FormService.js)
+- `createDeliveryPaceForm()`: Creates/updates the collection form
+- `onDeliveryPaceFormSubmit()`: Processes form submissions automatically
+- `generateFormQRCode()`: Creates QR code for easy mobile access
+- `sendFormToDrivers()`: Email form links to driver list
+
+#### Data Flow
+1. **Driver submits form** at checkpoint time (1:40 PM, 3:40 PM, etc.)
+2. **Form response saved** to "Delivery Pace Data" sheet
+3. **Trigger processes submission** and updates Daily Details
+4. **getDeliveryPaceData()** reads from form responses first
+5. **Summary reports** aggregate all submitted data
+
+#### Setting Up Forms
+1. Go to `Delivery Pace` → `Form Management` → `Create/Update Collection Form`
+2. System creates form linked to Daily Summary spreadsheet
+3. Get form URL or QR code from `Get Form Link & QR Code`
+4. Set up automatic processing with `Setup Form Trigger`
+5. Share form link with drivers (bookmark on phones)
+
+### Alternative Integration Points
+If forms don't meet your needs, the system still supports:
+
+1. **Direct API Integration**
+2. **Database Connections**
+3. **Other Google Sheets**
+4. **CSV Imports**
 
 ### Menu Structure
 The Delivery Pace menu provides:

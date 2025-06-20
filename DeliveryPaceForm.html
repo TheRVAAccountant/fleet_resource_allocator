@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #1a73e8;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    select {
+      height: 44px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1a73e8;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .submit-btn {
+      background-color: #1a73e8;
+      color: white;
+    }
+    .submit-btn:hover {
+      background-color: #1557b0;
+    }
+    .submit-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .reset-btn {
+      background-color: #f1f3f4;
+      color: #333;
+    }
+    .reset-btn:hover {
+      background-color: #e0e0e0;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .error {
+      color: #d93025;
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #fce8e6;
+      border-radius: 4px;
+      display: none;
+    }
+    .success {
+      color: #188038;
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #e6f4ea;
+      border-radius: 4px;
+      display: none;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #1a73e8;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .readonly {
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Delivery Pace Report</h2>
+    
+    <form id="paceForm">
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required>
+        <div class="help-text">Leave as today unless reporting for a different date</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="vanId">Van ID</label>
+        <select id="vanId" name="vanId" required>
+          <option value="">Select your van...</option>
+        </select>
+        <div class="help-text">Select your assigned van</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="driverName">Driver Name</label>
+        <input type="text" id="driverName" name="driverName" required>
+        <div class="help-text">Auto-populated based on van selection</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="routeCode">Route Code</label>
+        <select id="routeCode" name="routeCode" required>
+          <option value="">Select route...</option>
+        </select>
+        <div class="help-text">Auto-populated based on van selection</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="reportingTime">Reporting Time</label>
+        <select id="reportingTime" name="reportingTime" required>
+          <option value="">Select checkpoint...</option>
+          <option value="1:40 PM">1:40 PM</option>
+          <option value="3:40 PM">3:40 PM</option>
+          <option value="5:40 PM">5:40 PM</option>
+          <option value="7:40 PM">7:40 PM</option>
+          <option value="9:40 PM">9:40 PM (End of Day)</option>
+        </select>
+        <div class="help-text">Select the checkpoint you are reporting for</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="deliveryCount">Total Deliveries Completed</label>
+        <input type="number" id="deliveryCount" name="deliveryCount" min="0" required>
+        <div class="help-text">Enter the TOTAL number of deliveries completed so far today</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="notes">Notes (Optional)</label>
+        <textarea id="notes" name="notes" rows="3"></textarea>
+        <div class="help-text">Any issues or comments about your route</div>
+      </div>
+      
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Submitting...</p>
+      </div>
+      
+      <div class="error" id="errorMsg"></div>
+      <div class="success" id="successMsg"></div>
+      
+      <div class="button-group">
+        <button type="submit" class="submit-btn">Submit Report</button>
+        <button type="button" class="reset-btn" onclick="resetForm()">Clear Form</button>
+      </div>
+    </form>
+  </div>
+  
+  <script>
+    // Global data storage
+    let assignments = {};
+    let vanList = [];
+    let routeList = [];
+    
+    // Initialize form on load
+    window.onload = function() {
+      // Set today's date
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      
+      // Load form data
+      loadFormData();
+      
+      // Set up van change handler
+      document.getElementById('vanId').addEventListener('change', handleVanChange);
+      
+      // Set up form submission
+      document.getElementById('paceForm').addEventListener('submit', handleSubmit);
+    };
+    
+    // Load van and route data
+    function loadFormData() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          assignments = data.assignments;
+          vanList = data.vans;
+          routeList = data.routes;
+          
+          // Populate van dropdown
+          const vanSelect = document.getElementById('vanId');
+          vanList.forEach(van => {
+            const option = document.createElement('option');
+            option.value = van;
+            option.textContent = van;
+            vanSelect.appendChild(option);
+          });
+          
+          // Populate route dropdown
+          const routeSelect = document.getElementById('routeCode');
+          routeList.forEach(route => {
+            const option = document.createElement('option');
+            option.value = route;
+            option.textContent = route;
+            routeSelect.appendChild(option);
+          });
+        })
+        .withFailureHandler(function(error) {
+          showError('Failed to load form data: ' + error.message);
+        })
+        .getFormData();
+    }
+    
+    // Handle van selection change
+    function handleVanChange() {
+      const vanId = document.getElementById('vanId').value;
+      
+      if (vanId && assignments[vanId]) {
+        // Auto-populate driver name and route
+        document.getElementById('driverName').value = assignments[vanId].driver || '';
+        document.getElementById('routeCode').value = assignments[vanId].route || '';
+        
+        // Make fields readonly if auto-populated
+        document.getElementById('driverName').readOnly = !!assignments[vanId].driver;
+        document.getElementById('routeCode').disabled = !!assignments[vanId].route;
+        
+        if (assignments[vanId].driver) {
+          document.getElementById('driverName').classList.add('readonly');
+        } else {
+          document.getElementById('driverName').classList.remove('readonly');
+        }
+      } else {
+        // Clear and enable fields
+        document.getElementById('driverName').value = '';
+        document.getElementById('routeCode').value = '';
+        document.getElementById('driverName').readOnly = false;
+        document.getElementById('routeCode').disabled = false;
+        document.getElementById('driverName').classList.remove('readonly');
+      }
+    }
+    
+    // Handle form submission
+    function handleSubmit(e) {
+      e.preventDefault();
+      
+      // Hide any previous messages
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'none';
+      
+      // Show loading
+      document.querySelector('.loading').style.display = 'block';
+      document.querySelector('.submit-btn').disabled = true;
+      
+      // Collect form data
+      const formData = {
+        date: document.getElementById('date').value,
+        vanId: document.getElementById('vanId').value,
+        driverName: document.getElementById('driverName').value,
+        routeCode: document.getElementById('routeCode').value,
+        reportingTime: document.getElementById('reportingTime').value,
+        deliveryCount: parseInt(document.getElementById('deliveryCount').value),
+        notes: document.getElementById('notes').value
+      };
+      
+      // Submit to server
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.querySelector('.loading').style.display = 'none';
+          document.querySelector('.submit-btn').disabled = false;
+          
+          showSuccess('Report submitted successfully!');
+          
+          // Clear only the time-specific fields
+          document.getElementById('reportingTime').value = '';
+          document.getElementById('deliveryCount').value = '';
+          document.getElementById('notes').value = '';
+        })
+        .withFailureHandler(function(error) {
+          document.querySelector('.loading').style.display = 'none';
+          document.querySelector('.submit-btn').disabled = false;
+          
+          showError('Failed to submit: ' + error.message);
+        })
+        .submitDeliveryPaceReport(formData);
+    }
+    
+    // Reset form
+    function resetForm() {
+      document.getElementById('paceForm').reset();
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      handleVanChange(); // Reset field states
+      
+      // Hide messages
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'none';
+    }
+    
+    // Show error message
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+    
+    // Show success message
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMsg');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

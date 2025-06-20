@@ -13,7 +13,7 @@ function showUploadDialog() {
   var html = HtmlService.createHtmlOutputFromFile('UploadDialog')
     .setWidth(getConfig('UI.UPLOAD_DIALOG_WIDTH'))
     .setHeight(getConfig('UI.UPLOAD_DIALOG_HEIGHT'));
-  SpreadsheetApp.getUi().showModalDialog(html, 'Select XLSX Files');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Vehicle Allocation Tool');
 }
 
 /**

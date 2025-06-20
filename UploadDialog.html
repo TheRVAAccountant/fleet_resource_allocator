@@ -2,86 +2,397 @@
 <html>
   <head>
     <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
       body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #f8f9fa;
+        padding: 24px;
+        color: #202124;
       }
-      label {
-        font-weight: bold;
-      }
-      #progressContainer {
-        margin-top: 10px;
-        width: 100%;
-        background-color: #f3f3f3;
-        border-radius: 5px;
+      
+      .container {
+        max-width: 500px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px rgba(60,64,67,0.15);
         overflow: hidden;
       }
-      #progressBar {
-        width: 0%;
-        height: 20px;
-        background-color: #4CAF50;
-        text-align: center;
-        line-height: 20px;
+      
+      .header {
+        background: linear-gradient(135deg, #1a73e8 0%, #0099ff 100%);
         color: white;
-        transition: width 0.4s ease;
+        padding: 24px;
+        text-align: center;
       }
-      #status {
-        margin-top: 10px;
+      
+      .header h2 {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      
+      .header p {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+      
+      .content {
+        padding: 24px;
+      }
+      
+      .file-input-group {
+        margin-bottom: 24px;
+      }
+      
+      .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        border: 2px dashed #dadce0;
+        border-radius: 8px;
+        padding: 32px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background-color: #f8f9fa;
+      }
+      
+      .file-input-wrapper:hover {
+        border-color: #1a73e8;
+        background-color: #f1f3ff;
+      }
+      
+      .file-input-wrapper.has-file {
+        border-style: solid;
+        border-color: #34a853;
+        background-color: #e6f4ea;
+      }
+      
+      .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: -9999px;
+      }
+      
+      .file-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 12px;
+        background: #e8eaed;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5f6368;
+      }
+      
+      .file-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+      
+      .file-input-wrapper.has-file .file-icon {
+        background: #34a853;
+        color: white;
+      }
+      
+      .file-input-wrapper.has-file .file-icon svg {
+        fill: white;
+      }
+      
+      .file-label {
+        font-weight: 500;
+        color: #3c4043;
+        margin-bottom: 4px;
+        display: block;
+      }
+      
+      .file-hint {
+        font-size: 12px;
+        color: #5f6368;
+      }
+      
+      .file-name {
+        font-size: 14px;
+        color: #34a853;
+        margin-top: 8px;
+        font-weight: 500;
+      }
+      
+      .submit-button {
+        width: 100%;
+        padding: 12px 24px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 8px;
+      }
+      
+      .submit-button:hover:not(:disabled) {
+        background: #1557b0;
+        box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px rgba(60,64,67,0.15);
+      }
+      
+      .submit-button:disabled {
+        background: #dadce0;
+        cursor: not-allowed;
+        color: #80868b;
+        opacity: 0.8;
+      }
+      
+      .progress-section {
+        margin-top: 24px;
+        display: none;
+      }
+      
+      .progress-section.active {
+        display: block;
+      }
+      
+      .progress-container {
+        background-color: #e8eaed;
+        border-radius: 8px;
+        overflow: hidden;
+        height: 8px;
+        margin-bottom: 12px;
+      }
+      
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #1a73e8 0%, #34a853 100%);
+        width: 0%;
+        transition: width 0.4s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(255,255,255,0) 0%,
+          rgba(255,255,255,0.3) 50%,
+          rgba(255,255,255,0) 100%
+        );
+        transform: translateX(-100%);
+        animation: shimmer 1.5s infinite;
+      }
+      
+      @keyframes shimmer {
+        to {
+          transform: translateX(100%);
+        }
+      }
+      
+      .status-message {
+        text-align: center;
+        font-size: 14px;
+        color: #5f6368;
+        margin-bottom: 8px;
+      }
+      
+      .status-message.success {
+        color: #34a853;
+        font-weight: 500;
+      }
+      
+      .status-message.error {
+        color: #ea4335;
+        font-weight: 500;
+      }
+      
+      .percentage {
+        text-align: center;
+        font-size: 24px;
+        font-weight: 300;
+        color: #3c4043;
+      }
+      
+      .help-text {
+        background: #f8f9fa;
+        border-left: 4px solid #00abff;
+        padding: 12px 16px;
+        margin-top: 24px;
+        border-radius: 4px;
+      }
+      
+      .help-text h4 {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: #3c4043;
+      }
+      
+      .help-text p {
+        font-size: 12px;
+        color: #5f6368;
+        line-height: 1.5;
       }
     </style>
   </head>
   <body>
-    <h3>Select XLSX Files</h3>
-    <form id="uploadForm">
-      <div>
-        <label for="dayOfOpsFile">Day of Ops XLSX File:</label><br>
-        <input type="file" id="dayOfOpsFile" accept=".xlsx" required>
+    <div class="container">
+      <div class="header">
+        <h2>Vehicle Allocation Tool</h2>
+        <p>Upload files to assign vehicles to routes</p>
       </div>
-      <br>
-      <div>
-        <label for="dailyRoutesFile">Daily Routes XLSX File:</label><br>
-        <input type="file" id="dailyRoutesFile" accept=".xlsx" required>
+      
+      <div class="content">
+        <form id="uploadForm">
+          <div class="file-input-group">
+            <label class="file-input-wrapper" for="dayOfOpsFile" id="dayOfOpsWrapper">
+              <input type="file" id="dayOfOpsFile" accept=".xlsx" required>
+              <div class="file-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+              </div>
+              <span class="file-label">Day of Ops File</span>
+              <span class="file-hint">Click to select XLSX file</span>
+              <div class="file-name" id="dayOfOpsFileName"></div>
+            </label>
+          </div>
+          
+          <div class="file-input-group">
+            <label class="file-input-wrapper" for="dailyRoutesFile" id="dailyRoutesWrapper">
+              <input type="file" id="dailyRoutesFile" accept=".xlsx" required>
+              <div class="file-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+              </div>
+              <span class="file-label">Daily Routes File</span>
+              <span class="file-hint">Click to select XLSX file</span>
+              <div class="file-name" id="dailyRoutesFileName"></div>
+            </label>
+          </div>
+          
+          <button type="submit" class="submit-button" id="submitBtn" disabled>
+            Upload and Run Allocation
+          </button>
+        </form>
+        
+        <div class="progress-section" id="progressSection">
+          <div class="status-message" id="statusMessage">Preparing upload...</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <div class="percentage" id="percentageText">0%</div>
+        </div>
+        
+        <div class="help-text">
+          <h4>Quick Guide</h4>
+          <p>1. Select the Day of Ops file (contains route information)<br>
+             2. Select the Daily Routes file (contains driver assignments)<br>
+             3. Click upload to automatically allocate vehicles</p>
+        </div>
       </div>
-      <br>
-      <input type="submit" value="Upload and Run Allocation">
-    </form>
-    <div id="progressContainer">
-      <div id="progressBar">0%</div>
     </div>
-    <div id="status"></div>
     <script>
-      // Helper to update the progress bar and status message.
+      // File input handlers
+      const dayOfOpsInput = document.getElementById('dayOfOpsFile');
+      const dailyRoutesInput = document.getElementById('dailyRoutesFile');
+      const dayOfOpsWrapper = document.getElementById('dayOfOpsWrapper');
+      const dailyRoutesWrapper = document.getElementById('dailyRoutesWrapper');
+      const dayOfOpsFileName = document.getElementById('dayOfOpsFileName');
+      const dailyRoutesFileName = document.getElementById('dailyRoutesFileName');
+      const submitBtn = document.getElementById('submitBtn');
+      const progressSection = document.getElementById('progressSection');
+      const statusMessage = document.getElementById('statusMessage');
+      const percentageText = document.getElementById('percentageText');
+      
+      // Handle file selection
+      dayOfOpsInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          dayOfOpsWrapper.classList.add('has-file');
+          dayOfOpsFileName.textContent = file.name;
+          dayOfOpsWrapper.querySelector('.file-icon').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+          checkFilesAndEnableSubmit();
+        }
+      });
+      
+      dailyRoutesInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          dailyRoutesWrapper.classList.add('has-file');
+          dailyRoutesFileName.textContent = file.name;
+          dailyRoutesWrapper.querySelector('.file-icon').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+          checkFilesAndEnableSubmit();
+        }
+      });
+      
+      // Check if both files are selected
+      function checkFilesAndEnableSubmit() {
+        if (dayOfOpsInput.files.length > 0 && dailyRoutesInput.files.length > 0) {
+          submitBtn.disabled = false;
+        } else {
+          submitBtn.disabled = true;
+        }
+      }
+      
+      // Helper to update the progress bar and status message
       function updateProgress(percent, message) {
-        var progressBar = document.getElementById('progressBar');
+        const progressBar = document.getElementById('progressBar');
         progressBar.style.width = percent + '%';
-        progressBar.textContent = percent + '%';
+        percentageText.textContent = percent + '%';
+        
         if (message) {
-          document.getElementById('status').innerText = message;
+          statusMessage.textContent = message;
+          
+          // Update status styling based on completion
+          if (percent === 100) {
+            statusMessage.classList.add('success');
+          } else if (message.includes('Error') || message.includes('Failed')) {
+            statusMessage.classList.add('error');
+          }
         }
       }
 
       document.getElementById('uploadForm').addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Show progress section
+        progressSection.classList.add('active');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
+        
         updateProgress(0, "Starting upload...");
-        // Get the selected files.
-        var dayFile = document.getElementById('dayOfOpsFile').files[0];
-        var routesFile = document.getElementById('dailyRoutesFile').files[0];
+        
+        // Get the selected files
+        const dayFile = dayOfOpsInput.files[0];
+        const routesFile = dailyRoutesInput.files[0];
         
         if (!dayFile || !routesFile) {
           updateProgress(0, "Both files are required.");
           return;
         }
         
-        // Create two FileReaders for each file.
-        var reader1 = new FileReader();
-        var reader2 = new FileReader();
-        var dayFileData, routesFileData;
+        // Create two FileReaders for each file
+        const reader1 = new FileReader();
+        const reader2 = new FileReader();
+        let dayFileData, routesFileData;
         
         reader1.onprogress = function(e) {
           if (e.lengthComputable) {
-            // Use first 50% of the progress for day file reading.
-            var percentLoaded = Math.round((e.loaded / e.total) * 50);
+            // Use first 50% of the progress for day file reading
+            const percentLoaded = Math.round((e.loaded / e.total) * 50);
             updateProgress(percentLoaded, "Reading Day of Ops file...");
           }
         };
@@ -93,8 +404,8 @@
         
         reader2.onprogress = function(e) {
           if (e.lengthComputable) {
-            // Use next 25% (50-75%) for routes file reading.
-            var percentLoaded = 50 + Math.round((e.loaded / e.total) * 25);
+            // Use next 25% (50-75%) for routes file reading
+            const percentLoaded = 50 + Math.round((e.loaded / e.total) * 25);
             updateProgress(percentLoaded, "Reading Daily Routes file...");
           }
         };
@@ -107,21 +418,44 @@
         reader1.readAsDataURL(dayFile);
         reader2.readAsDataURL(routesFile);
         
-        // When both files have been read, proceed to upload.
+        // When both files have been read, proceed to upload
         function checkAndUpload() {
           if (dayFileData && routesFileData) {
-            // Upload the Day of Ops file first.
-            google.script.run.withSuccessHandler(function(dayOfOpsId) {
-              updateProgress(85, "Day file uploaded. Uploading Routes file...");
-              // Then upload the Daily Routes file.
-              google.script.run.withSuccessHandler(function(dailyRoutesId) {
-                updateProgress(95, "Both files uploaded. Running allocation...");
-                // Run the allocation process.
-                google.script.run.withSuccessHandler(function(){
-                  updateProgress(100, "Allocation completed successfully.");
-                }).runAllocation(dayOfOpsId, dailyRoutesId);
-              }).uploadAndConvertXLSX(routesFileData, routesFile.name);
-            }).uploadAndConvertXLSX(dayFileData, dayFile.name);
+            // Upload the Day of Ops file first
+            google.script.run
+              .withSuccessHandler(function(dayOfOpsId) {
+                updateProgress(85, "Day file uploaded. Uploading Routes file...");
+                // Then upload the Daily Routes file
+                google.script.run
+                  .withSuccessHandler(function(dailyRoutesId) {
+                    updateProgress(95, "Both files uploaded. Running allocation...");
+                    // Run the allocation process
+                    google.script.run
+                      .withSuccessHandler(function(){
+                        updateProgress(100, "✅ Allocation completed successfully!");
+                        submitBtn.textContent = 'Upload and Run Allocation';
+                        submitBtn.disabled = false;
+                      })
+                      .withFailureHandler(function(error){
+                        updateProgress(95, "❌ Error during allocation: " + error.message);
+                        submitBtn.textContent = 'Upload and Run Allocation';
+                        submitBtn.disabled = false;
+                      })
+                      .runAllocation(dayOfOpsId, dailyRoutesId);
+                  })
+                  .withFailureHandler(function(error){
+                    updateProgress(85, "❌ Error uploading Routes file: " + error.message);
+                    submitBtn.textContent = 'Upload and Run Allocation';
+                    submitBtn.disabled = false;
+                  })
+                  .uploadAndConvertXLSX(routesFileData, routesFile.name);
+              })
+              .withFailureHandler(function(error){
+                updateProgress(0, "❌ Error uploading Day of Ops file: " + error.message);
+                submitBtn.textContent = 'Upload and Run Allocation';
+                submitBtn.disabled = false;
+              })
+              .uploadAndConvertXLSX(dayFileData, dayFile.name);
           }
         }
       });

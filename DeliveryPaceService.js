@@ -38,10 +38,18 @@ function initializeDeliveryPaceHeaders() {
  * @return {Object} Pace data by time slot
  */
 function getDeliveryPaceData(vanId, date) {
-  // TODO: Replace with actual data source integration
   Logger.log("Fetching delivery pace data for Van: " + vanId + ", Date: " + date);
   
-  // For production, use getDeliveryPaceDataFromSource() instead
+  // Try to get data from form responses first
+  var formData = getDeliveryPaceDataFromForms(vanId, date);
+  
+  if (formData && Object.keys(formData).length > 0) {
+    Logger.log("Using form-submitted data for Van: " + vanId);
+    return formData;
+  }
+  
+  // Fallback to other data sources or mock data
+  Logger.log("No form data found, using mock data for Van: " + vanId);
   return getDeliveryPaceDataFromSource(vanId, date);
 }
 
@@ -81,6 +89,71 @@ function getDeliveryPaceDataFromSource(vanId, date) {
     "7:40 PM": baseStops + Math.floor(Math.random() * 60) + 60,
     "9:40 PM": baseStops + Math.floor(Math.random() * 70) + 80
   };
+}
+
+/**
+ * Get delivery pace data from form submissions
+ * @param {string} vanId - Van ID
+ * @param {string} date - Date string
+ * @return {Object} Pace data from forms
+ */
+function getDeliveryPaceDataFromForms(vanId, date) {
+  try {
+    var ss = SpreadsheetApp.openById(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'));
+    var dataSheet = ss.getSheetByName('Delivery Pace Data');
+    
+    if (!dataSheet) {
+      Logger.log("Delivery Pace Data sheet not found");
+      return null;
+    }
+    
+    var data = dataSheet.getDataRange().getValues();
+    var paceData = {
+      "1:40 PM": null,
+      "3:40 PM": null,
+      "5:40 PM": null,
+      "7:40 PM": null,
+      "9:40 PM": null
+    };
+    
+    // Headers: Timestamp, Date, Van ID, Driver Name, Route Code, Reporting Time, Total Deliveries, Notes, Processed
+    for (var i = 1; i < data.length; i++) {
+      var rowDate = data[i][1];
+      if (rowDate instanceof Date) {
+        rowDate = formatDate(rowDate);
+      }
+      
+      var rowVanId = data[i][2];
+      var reportingTime = data[i][5];
+      var deliveryCount = data[i][6];
+      
+      // Match van ID and date
+      if (rowVanId === vanId && rowDate === date) {
+        // Map reporting time to our standard format
+        var timeKey = reportingTime.replace(' (End of Day)', '');
+        
+        if (paceData.hasOwnProperty(timeKey)) {
+          // Keep the latest submission for each time slot
+          paceData[timeKey] = deliveryCount;
+        }
+      }
+    }
+    
+    // Check if we have any actual data
+    var hasData = false;
+    for (var key in paceData) {
+      if (paceData[key] !== null) {
+        hasData = true;
+        break;
+      }
+    }
+    
+    return hasData ? paceData : null;
+    
+  } catch (error) {
+    Logger.log("Error reading form data: " + error);
+    return null;
+  }
 }
 
 /**
