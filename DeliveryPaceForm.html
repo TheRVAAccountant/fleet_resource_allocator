@@ -203,10 +203,30 @@
     let vanList = [];
     let routeList = [];
     
+    // Helper function to get today's date in MM/DD/YYYY format
+    function getTodayFormatted() {
+      const today = new Date();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const year = today.getFullYear();
+      return `${month}/${day}/${year}`;
+    }
+    
+    // Helper function to convert date input value to MM/DD/YYYY
+    function formatDateInput(dateInputValue) {
+      if (!dateInputValue) return '';
+      const [year, month, day] = dateInputValue.split('-');
+      return `${month}/${day}/${year}`;
+    }
+    
     // Initialize form on load
     window.onload = function() {
-      // Set today's date
-      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      // Set today's date (HTML date input needs YYYY-MM-DD format)
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      document.getElementById('date').value = `${year}-${month}-${day}`;
       
       // Load form data
       loadFormData();
@@ -292,7 +312,7 @@
       
       // Collect form data
       const formData = {
-        date: document.getElementById('date').value,
+        date: formatDateInput(document.getElementById('date').value), // Convert to MM/DD/YYYY
         vanId: document.getElementById('vanId').value,
         driverName: document.getElementById('driverName').value,
         routeCode: document.getElementById('routeCode').value,
@@ -326,7 +346,12 @@
     // Reset form
     function resetForm() {
       document.getElementById('paceForm').reset();
-      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      // Set today's date (HTML date input needs YYYY-MM-DD format)
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      document.getElementById('date').value = `${year}-${month}-${day}`;
       handleVanChange(); // Reset field states
       
       // Hide messages
