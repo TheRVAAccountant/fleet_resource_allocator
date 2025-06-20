@@ -47,8 +47,7 @@ function sendDeliveryPaceEmail(formData) {
       throw new Error('Van ID is required');
     }
     
-    const config = getConfig();
-    const recipient = config.EMAIL_RECIPIENT;
+    const recipient = getConfig('EMAIL_RECIPIENT');
     const subject = createEmailSubject(formData);
     const htmlBody = createEmailBody(formData);
     
@@ -290,11 +289,11 @@ function createEmailBody(formData) {
   }
   
   // Add link to spreadsheet
-  const config = getConfig();
+  const spreadsheetId = getConfig('DAILY_SUMMARY_SPREADSHEET_ID');
   html += `
         <div class="info-box" style="text-align: center;">
           <p style="margin: 0;">
-            <a href="https://docs.google.com/spreadsheets/d/${config.DAILY_SUMMARY_SPREADSHEET_ID}" 
+            <a href="https://docs.google.com/spreadsheets/d/${spreadsheetId}" 
                style="color: #1a73e8; text-decoration: none; font-weight: bold;">
               View Full Data in Daily Summary Spreadsheet →
             </a>
@@ -428,10 +427,109 @@ function testDeliveryPaceEmail() {
   
   if (success) {
     console.log('Test email sent successfully!');
-    SpreadsheetApp.getUi().alert('Test email sent successfully! Check inbox for ' + getConfig().EMAIL_RECIPIENT);
+    SpreadsheetApp.getUi().alert('Test email sent successfully! Check inbox for ' + getConfig('EMAIL_RECIPIENT'));
   } else {
     console.log('Failed to send test email');
     SpreadsheetApp.getUi().alert('Failed to send test email. Check logs for details.');
+  }
+}
+
+/**
+ * Debug version of test email to find exact error location
+ */
+function debugTestDeliveryPaceEmail() {
+  console.log('=== Starting Debug Test Email ===');
+  
+  try {
+    // Test 1: Create test data
+    console.log('Step 1: Creating test data...');
+    const testData = {
+      vanId: 'BW15',
+      date: new Date(),
+      timestamp: new Date(),
+      driverName: 'John Smith',
+      deliveries: {
+        '1:40 PM': 45,
+        '3:40 PM': 89,
+        '5:40 PM': 134,
+        '7:40 PM': 178
+      },
+      notes: 'Heavy traffic on route. Delayed start due to vehicle inspection.'
+    };
+    console.log('Test data created successfully:', JSON.stringify(testData));
+    
+    // Test 2: Check getConfig
+    console.log('\nStep 2: Testing getConfig()...');
+    let emailRecipient;
+    try {
+      emailRecipient = getConfig('EMAIL_RECIPIENT');
+      console.log('EMAIL_RECIPIENT:', emailRecipient);
+      
+      // Test other config values
+      const spreadsheetId = getConfig('DAILY_SUMMARY_SPREADSHEET_ID');
+      console.log('DAILY_SUMMARY_SPREADSHEET_ID:', spreadsheetId);
+    } catch (e) {
+      console.error('Error in getConfig():', e);
+      throw e;
+    }
+    
+    // Test 3: Check Session
+    console.log('\nStep 3: Testing Session.getScriptTimeZone()...');
+    let timezone;
+    try {
+      timezone = Session.getScriptTimeZone();
+      console.log('Timezone:', timezone);
+    } catch (e) {
+      console.error('Error getting timezone:', e);
+      throw e;
+    }
+    
+    // Test 4: Create subject
+    console.log('\nStep 4: Creating email subject...');
+    let subject;
+    try {
+      subject = createEmailSubject(testData);
+      console.log('Subject created:', subject);
+    } catch (e) {
+      console.error('Error in createEmailSubject():', e);
+      console.error('Stack trace:', e.stack);
+      throw e;
+    }
+    
+    // Test 5: Create body
+    console.log('\nStep 5: Creating email body...');
+    let body;
+    try {
+      body = createEmailBody(testData);
+      console.log('Body created, length:', body ? body.length : 'null');
+    } catch (e) {
+      console.error('Error in createEmailBody():', e);
+      console.error('Stack trace:', e.stack);
+      throw e;
+    }
+    
+    // Test 6: Send email
+    console.log('\nStep 6: Sending email...');
+    try {
+      const success = sendDeliveryPaceEmail(testData);
+      console.log('Email send result:', success);
+      
+      if (success) {
+        SpreadsheetApp.getUi().alert('Debug test passed! Email sent successfully.');
+      } else {
+        SpreadsheetApp.getUi().alert('Debug test failed. Check logs for details.');
+      }
+    } catch (e) {
+      console.error('Error in sendDeliveryPaceEmail():', e);
+      console.error('Stack trace:', e.stack);
+      throw e;
+    }
+    
+  } catch (error) {
+    console.error('=== Debug Test Failed ===');
+    console.error('Final error:', error);
+    console.error('Stack trace:', error.stack);
+    SpreadsheetApp.getUi().alert('Debug test failed: ' + error.toString());
   }
 }
 
