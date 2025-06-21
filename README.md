@@ -85,8 +85,13 @@ The Fleet Resource Allocator is a Google Apps Script application that automates 
 
 ### Menus Not Appearing
 1. Refresh the spreadsheet (Ctrl+R or Cmd+R)
-2. Close and reopen the spreadsheet
-3. Use **Vehicle Assignment Tool** → **Test Required Functions** to check for missing functions
+2. Look for the **Vehicle Assignment Tool** menu
+3. Click **Vehicle Assignment Tool** → **Initialize All Menus**
+4. Wait for the success message
+5. All menus should now appear (Delivery Pace, Fleet Operations, Reports, Help)
+6. If menus still don't appear, refresh the spreadsheet again
+
+**Note**: Due to Google Apps Script loading behavior, menus must be initialized manually the first time.
 
 ### Allocation Errors
 1. Check that your Excel files have the correct sheet names:

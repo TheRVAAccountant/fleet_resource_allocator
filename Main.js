@@ -13,24 +13,76 @@
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   
-  // Main vehicle assignment menu - this always works
+  // Create the basic menu with initialization option
   ui.createMenu("Vehicle Assignment Tool")
     .addItem("Upload Files for Allocation", "showUploadDialog")
     .addSeparator()
-    .addItem("Create Extended Menus", "createExtendedMenus")
+    .addItem("Initialize All Menus", "initializeAllMenus")
     .addToUi();
+}
+
+/**
+ * Initialize all menus - call this once to set up the complete menu system
+ */
+function initializeAllMenus() {
+  var ui = SpreadsheetApp.getUi();
   
-  // Delivery pace tracking menu - restored from original modular commit
-  ui.createMenu("Delivery Pace")
-    .addItem("Initialize Headers", "initializeDeliveryPaceHeaders")
-    .addItem("Update Today's Pace", "updateDeliveryPaceForToday")
-    .addSeparator()
-    .addItem("Generate Today's Summary", "generateTodaysSummary")
-    .addItem("Update Specific Van", "showUpdateVanDialog")
-    .addSeparator()
-    .addItem("Setup Auto-Update Triggers", "setupDeliveryPaceTriggers")
-    .addItem("Test Update", "testDeliveryPaceUpdate")
-    .addToUi();
+  // Clear existing menus by recreating the UI
+  onOpen();
+  
+  // Now add all the menus
+  try {
+    // Delivery Pace menu
+    ui.createMenu("Delivery Pace")
+      .addItem("Initialize Headers", "initializeDeliveryPaceHeaders")
+      .addItem("Update Today's Pace", "updateDeliveryPaceForToday")
+      .addSeparator()
+      .addItem("Generate Today's Summary", "generateTodaysSummary")
+      .addItem("Update Specific Van", "showUpdateVanDialog")
+      .addSeparator()
+      .addItem("Setup Auto-Update Triggers", "setupDeliveryPaceTriggers")
+      .addItem("Test Update", "testDeliveryPaceUpdate")
+      .addToUi();
+    
+    // Fleet Operations menu
+    ui.createMenu('Fleet Operations')
+      .addItem('Allocate Vehicles', 'showUploadDialog')
+      .addItem('View Dashboard', 'showDashboard')
+      .addSeparator()
+      .addItem('Delivery Pace Form', 'showDeliveryPaceForm')
+      .addItem('RTS Report', 'showRTSForm')
+      .addSeparator()
+      .addItem('Form Management', 'showFormManagement')
+      .addItem('View Error Log', 'showErrorLog')
+      .addToUi();
+    
+    // Reports menu
+    ui.createMenu('Reports')
+      .addItem('Vehicle Utilization', 'generateVehicleUtilizationReport')
+      .addItem('Driver Performance', 'generateDriverPerformanceReport')
+      .addItem('Weekly Summary', 'generateWeeklySummaryReport')
+      .addSeparator()
+      .addItem('Analytics Dashboard', 'showAnalyticsDashboard')
+      .addSeparator()
+      .addItem('Export All Data', 'exportAllData')
+      .addToUi();
+    
+    // Help menu
+    ui.createMenu('Help')
+      .addItem('User Guide', 'showUserGuide')
+      .addItem('About', 'showAbout')
+      .addToUi();
+    
+    // Success message
+    ui.alert('Menu Initialization Complete', 
+      'All menus have been successfully created. You may need to refresh the spreadsheet to see all menus.', 
+      ui.ButtonSet.OK);
+    
+  } catch (error) {
+    ui.alert('Menu Initialization Error', 
+      'Some menus could not be created. Error: ' + error.toString(), 
+      ui.ButtonSet.OK);
+  }
 }
 
 /**
