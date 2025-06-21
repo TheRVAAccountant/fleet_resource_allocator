@@ -89,6 +89,48 @@ var CONFIG = {
   DEV_SETTINGS: {
     USE_MOCK_DATA: false,  // Set to true only for testing/development
     MOCK_DATA_ENABLED_VANS: []  // Specific vans to use mock data for (empty = none)
+  },
+  
+  // Logging Settings
+  LOGGING: {
+    level: 'INFO',  // Options: DEBUG, INFO, WARN, ERROR, CRITICAL
+    persistToSheet: true,  // Log errors to Error Log sheet
+    externalEndpoint: null  // Optional external logging service URL
+  },
+  
+  // Cache Settings
+  CACHE: {
+    defaultTTL: 300,  // Default cache time-to-live in seconds (5 minutes)
+    maxSize: 100,  // Maximum number of cache entries
+    enabled: true  // Global cache enable/disable
+  },
+  
+  // UI Settings Extended
+  UI_SETTINGS: {
+    showAnimations: true,
+    autoCloseDialogs: true,
+    autoCloseDuration: 2000,  // milliseconds
+    progressUpdateInterval: 100,  // Update progress every N items
+    theme: 'light'  // 'light' or 'dark'
+  },
+  
+  // Performance Settings
+  PERFORMANCE: {
+    batchSize: 100,  // Number of items to process in batch operations
+    maxConcurrent: 10,  // Maximum concurrent operations
+    timeout: 300000  // Operation timeout in milliseconds (5 minutes)
+  },
+  
+  // Feature Flags
+  FEATURES: {
+    DASHBOARD_ENABLED: true,
+    AUTO_EMAIL_NOTIFICATIONS: true,
+    PACE_TRACKING_ENABLED: true,
+    RTS_TRACKING_ENABLED: true,
+    SMART_DEFAULTS_ENABLED: true,
+    DEV_TOOLS_ENABLED: true,
+    PROGRESS_TRACKING_ENABLED: true,
+    ADVANCED_CACHING_ENABLED: true
   }
 };
 

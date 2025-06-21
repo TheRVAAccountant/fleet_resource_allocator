@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8f9fa;
+      color: #202124;
+      line-height: 1.6;
+    }
+    
+    .dashboard-container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .dashboard-header {
+      background: linear-gradient(135deg, #1a73e8 0%, #34a853 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .dashboard-header h1 {
+      font-size: 28px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .dashboard-header .subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    
+    .dashboard-header .last-update {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-top: 8px;
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .metric-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .metric-card .label {
+      font-size: 14px;
+      color: #5f6368;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .metric-card .value {
+      font-size: 32px;
+      font-weight: 500;
+      color: #202124;
+      margin-bottom: 4px;
+    }
+    
+    .metric-card .sub-value {
+      font-size: 14px;
+      color: #5f6368;
+    }
+    
+    .metric-card.primary {
+      background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+      color: white;
+    }
+    
+    .metric-card.primary .label,
+    .metric-card.primary .sub-value {
+      color: rgba(255,255,255,0.9);
+    }
+    
+    .metric-card.primary .value {
+      color: white;
+    }
+    
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .section h2 {
+      font-size: 20px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #202124;
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 8px;
+    }
+    
+    .alerts-section {
+      margin-bottom: 24px;
+    }
+    
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .alert-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    
+    .alert.info {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+    
+    .alert.warning {
+      background: #fff3e0;
+      color: #e65100;
+    }
+    
+    .alert.error {
+      background: #ffebee;
+      color: #c62828;
+    }
+    
+    .alert.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .progress-bar {
+      background: #e0e0e0;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #34a853;
+      transition: width 0.3s ease;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .stat-label {
+      color: #5f6368;
+    }
+    
+    .stat-value {
+      font-weight: 500;
+      color: #202124;
+    }
+    
+    .activity-list {
+      list-style: none;
+    }
+    
+    .activity-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .activity-icon {
+      width: 32px;
+      height: 32px;
+      background: #f0f0f0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .activity-icon.allocation {
+      background: #e3f2fd;
+      color: #1a73e8;
+    }
+    
+    .activity-icon.rts {
+      background: #e8f5e9;
+      color: #34a853;
+    }
+    
+    .activity-details {
+      flex: 1;
+    }
+    
+    .activity-description {
+      font-size: 14px;
+      color: #202124;
+    }
+    
+    .activity-time {
+      font-size: 12px;
+      color: #5f6368;
+    }
+    
+    .close-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    
+    .close-button:hover {
+      transform: scale(1.1);
+    }
+    
+    .export-button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 16px;
+      transition: background 0.2s;
+    }
+    
+    .export-button:hover {
+      background: #1557b0;
+    }
+  </style>
+</head>
+<body>
+  <button class="close-button" onclick="google.script.host.close()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="#5f6368">
+      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+    </svg>
+  </button>
+  
+  <div class="dashboard-container">
+    <div class="dashboard-header">
+      <h1>Fleet Operations Dashboard</h1>
+      <div class="subtitle"><?= data.date ?></div>
+      <div class="last-update">Last updated: <?= data.lastUpdate ?></div>
+    </div>
+    
+    <? if (data.alerts && data.alerts.length > 0) { ?>
+    <div class="alerts-section">
+      <? data.alerts.forEach(function(alert) { ?>
+      <div class="alert <?= alert.type ?>">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="currentColor">
+          <? if (alert.type === 'warning') { ?>
+          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          <? } else if (alert.type === 'info') { ?>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+          <? } ?>
+        </svg>
+        <span><?= alert.message ?></span>
+      </div>
+      <? }); ?>
+    </div>
+    <? } ?>
+    
+    <div class="metrics-grid">
+      <div class="metric-card primary">
+        <div class="label">Operational Vehicles</div>
+        <div class="value"><?= data.vehicleStats.operational ?></div>
+        <div class="sub-value">of <?= data.vehicleStats.total ?> total (<?= data.vehicleStats.operationalRate ?>%)</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="label">Routes Assigned</div>
+        <div class="value"><?= data.allocationStats.assignedRoutes ?></div>
+        <div class="sub-value">of <?= data.allocationStats.totalRoutes ?> total (<?= data.allocationStats.allocationRate ?>%)</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="label">RTS Reports</div>
+        <div class="value"><?= data.rtsStats.completedReports ?></div>
+        <div class="sub-value"><?= data.rtsStats.completionRate ?>% completion rate</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="label">Delivery Success</div>
+        <div class="value"><?= data.rtsStats.successRate ?>%</div>
+        <div class="sub-value"><?= data.rtsStats.totalDelivered ?> delivered</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Vehicle Fleet Status</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-label">Extra Large Vans</span>
+          <span class="stat-value"><?= data.vehicleStats.byType['Extra Large'].operational ?> / <?= data.vehicleStats.byType['Extra Large'].total ?></span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Large Vans</span>
+          <span class="stat-value"><?= data.vehicleStats.byType['Large'].operational ?> / <?= data.vehicleStats.byType['Large'].total ?></span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Step Vans</span>
+          <span class="stat-value"><?= data.vehicleStats.byType['Step Van'].operational ?> / <?= data.vehicleStats.byType['Step Van'].total ?></span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Non-Operational</span>
+          <span class="stat-value"><?= data.vehicleStats.nonOperational ?></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Recent Activity</h2>
+      <ul class="activity-list">
+        <? if (data.recentActivity && data.recentActivity.length > 0) { ?>
+          <? data.recentActivity.forEach(function(activity) { ?>
+          <li class="activity-item">
+            <div class="activity-icon <?= activity.type ?>">
+              <? if (activity.type === 'allocation') { ?>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+              <? } else { ?>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <? } ?>
+            </div>
+            <div class="activity-details">
+              <div class="activity-description"><?= activity.description ?></div>
+              <div class="activity-time"><?= activity.timestamp ?></div>
+            </div>
+          </li>
+          <? }); ?>
+        <? } else { ?>
+          <li class="activity-item">
+            <div class="activity-details">
+              <div class="activity-description">No recent activity</div>
+            </div>
+          </li>
+        <? } ?>
+      </ul>
+    </div>
+    
+    <button class="export-button" onclick="exportDashboard()">Export Dashboard Data</button>
+  </div>
+  
+  <script>
+    function exportDashboard() {
+      google.script.run
+        .withSuccessHandler(function() {
+          alert('Dashboard data exported successfully!');
+        })
+        .withFailureHandler(function(error) {
+          alert('Export failed: ' + error.message);
+        })
+        .exportDashboardToSheet();
+    }
+  </script>
+</body>
+</html>

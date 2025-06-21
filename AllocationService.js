@@ -8,28 +8,50 @@
 
 /**
  * Main allocation function that orchestrates the entire process
- * @param {string} dayOfOpsId - Day of Ops spreadsheet ID
- * @param {string} dailyRoutesId - Daily Routes spreadsheet ID
+ * @param {string} dayOfOpsId - Day of Ops spreadsheet ID containing route information
+ * @param {string} dailyRoutesId - Daily Routes spreadsheet ID containing driver assignments
+ * @throws {AllocationError} If allocation process fails
+ * @throws {FileProcessingError} If spreadsheet access fails
+ * @return {void}
  */
 function mainAllocation(dayOfOpsId, dailyRoutesId) {
-  Logger.log("------------------------------");
-  Logger.log("Starting mainAllocation...");
+  const logger = Logger.createLogger('AllocationService');
+  const timer = logger.startTimer('mainAllocation');
   
-  Logger.log("User-supplied DayOfOps ID: " + dayOfOpsId);
-  Logger.log("User-supplied DailyRoutes ID: " + dailyRoutesId);
+  logger.info("Starting allocation process", {
+    dayOfOpsId: dayOfOpsId,
+    dailyRoutesId: dailyRoutesId
+  });
   
-  // Load data from spreadsheets
-  var dayOfOpsData = getSheetData(dayOfOpsId, getConfig('SHEETS.DAY_OF_OPS_SOLUTION'));
-  Logger.log("Loaded DayOfOps data. Rows: " + (dayOfOpsData.length - 1));
-  
-  var vehicleStatusData = getSheetData(
-    getConfig('DAILY_SUMMARY_SPREADSHEET_ID'), 
-    getConfig('SHEETS.VEHICLE_STATUS')
-  );
-  Logger.log("Loaded Fleet (VehicleStatus) data. Rows: " + (vehicleStatusData.length - 1));
-  
-  var routesData = getSheetData(dailyRoutesId, getConfig('SHEETS.DAILY_ROUTES'));
-  Logger.log("Loaded DailyRoutes data. Rows: " + (routesData.length - 1));
+  try {
+    // Record action for smart defaults
+    SmartDefaults.recordAction('allocation_started', {
+      dayOfOpsId,
+      dailyRoutesId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Load data from spreadsheets with caching
+    const dayOfOpsData = Cache.get(
+      `dayOfOps_${dayOfOpsId}`,
+      () => getSheetData(dayOfOpsId, getConfig('SHEETS.DAY_OF_OPS_SOLUTION')),
+      { ttl: 300 } // Cache for 5 minutes
+    );
+    logger.info("Loaded DayOfOps data", { rows: dayOfOpsData.length - 1 });
+    
+    const vehicleStatusData = Cache.get(
+      'vehicleStatus',
+      () => getSheetData(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'), getConfig('SHEETS.VEHICLE_STATUS')),
+      { ttl: 600 } // Cache for 10 minutes
+    );
+    logger.info("Loaded Fleet (VehicleStatus) data", { rows: vehicleStatusData.length - 1 });
+    
+    const routesData = Cache.get(
+      `dailyRoutes_${dailyRoutesId}`,
+      () => getSheetData(dailyRoutesId, getConfig('SHEETS.DAILY_ROUTES')),
+      { ttl: 300 }
+    );
+    logger.info("Loaded DailyRoutes data", { rows: routesData.length - 1 });
   
   // Verify required columns
   verifyRequiredColumns(
@@ -114,10 +136,30 @@ function mainAllocation(dayOfOpsId, dailyRoutesId) {
   );
   Logger.log("Route Assignments file created. ID: " + routeAssignmentsFileId);
   
-  Logger.log("mainAllocation completed successfully.");
+  logger.info("Main allocation completed successfully");
   showAllocationCompleteAlert(resultsSheetName, unassignedSheetName, routeAssignmentsFileId);
   
-  Logger.log("------------------------------");
+  // Record successful completion
+  SmartDefaults.recordAction('allocation_completed', {
+    resultsSheet: resultsSheetName,
+    unassignedSheet: unassignedSheetName,
+    assignedVans: result.assignedVanIds.length,
+    unassignedVans: unassigned2D.length - 1
+  });
+  
+  timer.end();
+  
+  } catch (error) {
+    logger.error("Allocation failed", { error: error.message, stack: error.stack });
+    
+    // Record failure for smart defaults
+    SmartDefaults.recordAction('allocation_failed', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+    
+    throw error;
+  }
 }
 
 /**

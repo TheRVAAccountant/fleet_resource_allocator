@@ -11,10 +11,10 @@
       background-color: #f5f5f5;
     }
     .container {
-      max-width: 500px;
+      max-width: 550px;
       margin: 0 auto;
       background: white;
-      padding: 20px;
+      padding: 25px;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
@@ -51,6 +51,17 @@
       font-size: 12px;
       color: #666;
       margin-top: 5px;
+    }
+    .time-input-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .time-input-group input {
+      flex: 1;
+    }
+    .time-input-group span {
+      color: #666;
     }
     .button-group {
       display: flex;
@@ -122,17 +133,51 @@
     .readonly {
       background-color: #f5f5f5;
     }
+    .summary-box {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border: 1px solid #e0e0e0;
+    }
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .summary-label {
+      color: #666;
+    }
+    .summary-value {
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Delivery Pace Report</h2>
+    <h2>End of Day Report</h2>
     
-    <form id="paceForm">
+    <div class="summary-box" id="routeSummary" style="display: none;">
+      <h3 style="margin-top: 0; color: #1a73e8;">Route Summary</h3>
+      <div class="summary-item">
+        <span class="summary-label">Route:</span>
+        <span class="summary-value" id="summaryRoute"></span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Driver:</span>
+        <span class="summary-value" id="summaryDriver"></span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Van:</span>
+        <span class="summary-value" id="summaryVan"></span>
+      </div>
+    </div>
+    
+    <form id="rtsForm">
       <div class="form-group">
         <label for="date">Date</label>
-        <input type="date" id="date" name="date" required>
-        <div class="help-text">Leave as today unless reporting for a different date</div>
+        <input type="date" id="date" name="date" required readonly class="readonly">
+        <div class="help-text">Today's date</div>
       </div>
       
       <div class="form-group">
@@ -144,42 +189,42 @@
       </div>
       
       <div class="form-group">
-        <label for="driverName">Driver Name</label>
-        <input type="text" id="driverName" name="driverName" required>
-        <div class="help-text">Auto-populated based on van selection</div>
-      </div>
-      
-      <div class="form-group">
         <label for="routeCode">Route Code</label>
-        <select id="routeCode" name="routeCode" required>
-          <option value="">Select route...</option>
-        </select>
+        <input type="text" id="routeCode" name="routeCode" required readonly class="readonly">
         <div class="help-text">Auto-populated based on van selection</div>
       </div>
       
       <div class="form-group">
-        <label for="reportingTime">Reporting Time</label>
-        <select id="reportingTime" name="reportingTime" required>
-          <option value="">Select checkpoint...</option>
-          <option value="1:40 PM">1:40 PM</option>
-          <option value="3:40 PM">3:40 PM</option>
-          <option value="5:40 PM">5:40 PM</option>
-          <option value="7:40 PM">7:40 PM</option>
-          <option value="9:40 PM (End of Day)">9:40 PM (End of Day)</option>
-        </select>
-        <div class="help-text">Select the checkpoint you are reporting for</div>
+        <label for="driverName">Driver Name</label>
+        <input type="text" id="driverName" name="driverName" required readonly class="readonly">
+        <div class="help-text">Auto-populated based on van selection</div>
       </div>
       
       <div class="form-group">
-        <label for="deliveryCount">Total Deliveries Completed</label>
-        <input type="number" id="deliveryCount" name="deliveryCount" min="0" required>
-        <div class="help-text">Enter the TOTAL number of deliveries completed so far today</div>
+        <label for="rtsTime">RTS Time</label>
+        <div class="time-input-group">
+          <input type="time" id="rtsTime" name="rtsTime" required>
+          <button type="button" onclick="setCurrentTime()" style="flex: 0; padding: 10px 15px;">Now</button>
+        </div>
+        <div class="help-text">Time you returned to station</div>
       </div>
       
       <div class="form-group">
-        <label for="notes">Notes (Optional)</label>
-        <textarea id="notes" name="notes" rows="3"></textarea>
-        <div class="help-text">Any issues or comments about your route</div>
+        <label for="pkgDelivered">Packages Delivered</label>
+        <input type="number" id="pkgDelivered" name="pkgDelivered" min="0" required>
+        <div class="help-text">Total number of packages successfully delivered</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="pkgReturned">Packages Returned</label>
+        <input type="number" id="pkgReturned" name="pkgReturned" min="0" required value="0">
+        <div class="help-text">Number of packages returned to station</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="routeNotes">Route Notes (Optional)</label>
+        <textarea id="routeNotes" name="routeNotes" rows="3"></textarea>
+        <div class="help-text">Any issues, delays, or important notes about the route</div>
       </div>
       
       <div class="loading">
@@ -201,7 +246,6 @@
     // Global data storage
     let assignments = {};
     let vanList = [];
-    let routeList = [];
     
     // Helper function to get today's date in MM/DD/YYYY format
     function getTodayFormatted() {
@@ -217,6 +261,14 @@
       if (!dateInputValue) return '';
       const [year, month, day] = dateInputValue.split('-');
       return `${month}/${day}/${year}`;
+    }
+    
+    // Set current time in RTS Time field
+    function setCurrentTime() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('rtsTime').value = `${hours}:${minutes}`;
     }
     
     // Initialize form on load
@@ -235,7 +287,7 @@
       document.getElementById('vanId').addEventListener('change', handleVanChange);
       
       // Set up form submission
-      document.getElementById('paceForm').addEventListener('submit', handleSubmit);
+      document.getElementById('rtsForm').addEventListener('submit', handleSubmit);
     };
     
     // Load van and route data
@@ -244,7 +296,6 @@
         .withSuccessHandler(function(data) {
           assignments = data.assignments;
           vanList = data.vans;
-          routeList = data.routes;
           
           // Update van help text if message provided
           if (data.vanMessage) {
@@ -266,20 +317,11 @@
             vanSelect.value = vanList[0];
             handleVanChange(); // Auto-populate related fields
           }
-          
-          // Populate route dropdown
-          const routeSelect = document.getElementById('routeCode');
-          routeList.forEach(route => {
-            const option = document.createElement('option');
-            option.value = route;
-            option.textContent = route;
-            routeSelect.appendChild(option);
-          });
         })
         .withFailureHandler(function(error) {
           showError('Failed to load form data: ' + error.message);
         })
-        .getFormData();
+        .getRTSFormData();
     }
     
     // Handle van selection change
@@ -291,22 +333,16 @@
         document.getElementById('driverName').value = assignments[vanId].driver || '';
         document.getElementById('routeCode').value = assignments[vanId].route || '';
         
-        // Make fields readonly if auto-populated
-        document.getElementById('driverName').readOnly = !!assignments[vanId].driver;
-        document.getElementById('routeCode').disabled = !!assignments[vanId].route;
-        
-        if (assignments[vanId].driver) {
-          document.getElementById('driverName').classList.add('readonly');
-        } else {
-          document.getElementById('driverName').classList.remove('readonly');
-        }
+        // Show route summary
+        document.getElementById('summaryRoute').textContent = assignments[vanId].route || 'N/A';
+        document.getElementById('summaryDriver').textContent = assignments[vanId].driver || 'N/A';
+        document.getElementById('summaryVan').textContent = vanId;
+        document.getElementById('routeSummary').style.display = 'block';
       } else {
-        // Clear and enable fields
+        // Clear fields and hide summary
         document.getElementById('driverName').value = '';
         document.getElementById('routeCode').value = '';
-        document.getElementById('driverName').readOnly = false;
-        document.getElementById('routeCode').disabled = false;
-        document.getElementById('driverName').classList.remove('readonly');
+        document.getElementById('routeSummary').style.display = 'none';
       }
     }
     
@@ -326,11 +362,12 @@
       const formData = {
         date: formatDateInput(document.getElementById('date').value), // Convert to MM/DD/YYYY
         vanId: document.getElementById('vanId').value,
-        driverName: document.getElementById('driverName').value,
         routeCode: document.getElementById('routeCode').value,
-        reportingTime: document.getElementById('reportingTime').value,
-        deliveryCount: parseInt(document.getElementById('deliveryCount').value),
-        notes: document.getElementById('notes').value
+        driverName: document.getElementById('driverName').value,
+        rtsTime: document.getElementById('rtsTime').value,
+        pkgDelivered: parseInt(document.getElementById('pkgDelivered').value),
+        pkgReturned: parseInt(document.getElementById('pkgReturned').value),
+        routeNotes: document.getElementById('routeNotes').value
       };
       
       // Submit to server
@@ -339,12 +376,13 @@
           document.querySelector('.loading').style.display = 'none';
           document.querySelector('.submit-btn').disabled = false;
           
-          showSuccess('Report submitted successfully!');
+          showSuccess('End of Day report submitted successfully!');
           
-          // Clear only the time-specific fields
-          document.getElementById('reportingTime').value = '';
-          document.getElementById('deliveryCount').value = '';
-          document.getElementById('notes').value = '';
+          // Reset non-auto fields
+          document.getElementById('rtsTime').value = '';
+          document.getElementById('pkgDelivered').value = '';
+          document.getElementById('pkgReturned').value = '0';
+          document.getElementById('routeNotes').value = '';
         })
         .withFailureHandler(function(error) {
           document.querySelector('.loading').style.display = 'none';
@@ -352,18 +390,23 @@
           
           showError('Failed to submit: ' + error.message);
         })
-        .submitDeliveryPaceReport(formData);
+        .submitRTSReport(formData);
     }
     
     // Reset form
     function resetForm() {
-      document.getElementById('paceForm').reset();
-      // Set today's date (HTML date input needs YYYY-MM-DD format)
+      document.getElementById('rtsForm').reset();
+      
+      // Set today's date
       const today = new Date();
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       document.getElementById('date').value = `${year}-${month}-${day}`;
+      
+      // Set default returned packages
+      document.getElementById('pkgReturned').value = '0';
+      
       handleVanChange(); // Reset field states
       
       // Hide messages

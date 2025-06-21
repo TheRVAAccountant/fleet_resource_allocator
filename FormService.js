@@ -85,7 +85,7 @@ function createDeliveryPaceForm() {
         .setHelpText('Enter your route code manually');
     }
     
-    // Time checkpoint dropdown
+    // Time checkpoint dropdown - using text item to prevent date conversion
     var timeItem = form.addListItem()
       .setTitle('Reporting Time')
       .setRequired(true)
@@ -341,6 +341,10 @@ function setupDeliveryPaceDataSheet(sheet) {
   sheet.setColumnWidth(8, 200); // Notes
   sheet.setColumnWidth(9, 80);  // Processed
   
+  // Format Reporting Time column as plain text to prevent date conversion
+  var reportingTimeRange = sheet.getRange(2, 6, sheet.getMaxRows() - 1, 1);
+  reportingTimeRange.setNumberFormat('@'); // @ means plain text format
+  
   // Freeze header row
   sheet.setFrozenRows(1);
 }
@@ -364,18 +368,28 @@ function onDeliveryPaceFormSubmit(e) {
     // Update the Daily Details sheet
     updateDailyDetailsFromForm(formData);
     
+    // Format date for getAllCheckpointData
+    var formDate = formData['Date'];
+    if (formDate instanceof Date) {
+      formDate = formatDate(formDate);
+    }
+    
+    // Get all checkpoint data for this van and date
+    var allCheckpointData = getAllCheckpointData(formData['Van ID'], formDate);
+    
     // Prepare email data
     var emailData = {
       vanId: formData['Van ID'],
       date: formData['Date'],
       timestamp: response.getTimestamp(),
       driverName: formData['Driver Name'] || 'Not specified',
-      deliveries: {},
+      deliveries: allCheckpointData, // Use all checkpoint data
       notes: formData['Notes (Optional)'] || ''
     };
     
-    // Add delivery count for the reporting time
-    emailData.deliveries[formData['Reporting Time']] = formData['Total Deliveries Completed'];
+    // Ensure the current submission is included (in case it wasn't saved yet)
+    var normalizedTime = normalizeReportingTime(formData['Reporting Time']);
+    emailData.deliveries[normalizedTime] = formData['Total Deliveries Completed'];
     
     // Send email notification
     var emailSent = sendDeliveryPaceEmail(emailData);
@@ -431,7 +445,10 @@ function updateDailyDetailsFromForm(formData) {
       var updateColumn;
       
       // Map reporting time to column
-      switch (reportingTime) {
+      // Remove any suffix for consistent matching
+      var normalizedTime = normalizeReportingTime(reportingTime);
+      
+      switch (normalizedTime) {
         case '1:40 PM':
           updateColumn = 12; // Column L
           break;
@@ -444,11 +461,11 @@ function updateDailyDetailsFromForm(formData) {
         case '7:40 PM':
           updateColumn = 15; // Column O
           break;
-        case '9:40 PM (End of Day)':
+        case '9:40 PM':
           updateColumn = 16; // Column P
           break;
         default:
-          Logger.log('Unknown reporting time: ' + reportingTime);
+          Logger.log('Unknown reporting time: ' + reportingTime + ' (normalized: ' + normalizedTime + ')');
           return;
       }
       
@@ -675,14 +692,18 @@ function submitDeliveryPaceReport(formData) {
       formData.vanId,
       formData.driverName,
       formData.routeCode,
-      formData.reportingTime,
+      formData.reportingTime, // This will be a string
       formData.deliveryCount,
       formData.notes || '',
       'No' // Processed flag
     ];
     
     // Append to sheet
-    dataSheet.appendRow(rowData);
+    var newRow = dataSheet.getLastRow() + 1;
+    dataSheet.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
+    
+    // Ensure reporting time cell is formatted as text
+    dataSheet.getRange(newRow, 6).setNumberFormat('@');
     
     // Update Daily Details immediately
     updateDailyDetailsFromForm({
@@ -694,18 +715,22 @@ function submitDeliveryPaceReport(formData) {
       'Total Deliveries Completed': formData.deliveryCount
     });
     
+    // Get all checkpoint data for this van and date
+    var allCheckpointData = getAllCheckpointData(formData.vanId, formData.date);
+    
     // Send email notification
     var emailData = {
       vanId: formData.vanId,
       date: formData.date,
       timestamp: timestamp,
       driverName: formData.driverName || 'Not specified',
-      deliveries: {},
+      deliveries: allCheckpointData, // Use all checkpoint data
       notes: formData.notes || ''
     };
     
-    // Add delivery count for the reporting time
-    emailData.deliveries[formData.reportingTime] = formData.deliveryCount;
+    // Ensure the current submission is included (in case it wasn't saved yet)
+    var normalizedTime = normalizeReportingTime(formData.reportingTime);
+    emailData.deliveries[normalizedTime] = formData.deliveryCount;
     
     var emailSent = sendDeliveryPaceEmail(emailData);
     

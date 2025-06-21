@@ -111,8 +111,18 @@ function createEmailBody(formData) {
   // Calculate metrics with validation
   const deliveries = formData.deliveries || {};
   const checkpoints = Object.keys(deliveries).filter(key => key && key.trim()).sort();
-  const latestCheckpoint = checkpoints.length > 0 ? checkpoints[checkpoints.length - 1] : null;
-  const totalDeliveries = latestCheckpoint ? (deliveries[latestCheckpoint] || 0) : 0;
+  
+  // Define all checkpoints in order
+  const allCheckpoints = ['1:40 PM', '3:40 PM', '5:40 PM', '7:40 PM', '9:40 PM'];
+  
+  // Calculate cumulative total from incremental values
+  let cumulativeTotal = 0;
+  allCheckpoints.forEach(checkpoint => {
+    if (deliveries[checkpoint] !== null && deliveries[checkpoint] !== undefined && deliveries[checkpoint] !== '') {
+      cumulativeTotal += parseInt(deliveries[checkpoint]) || 0;
+    }
+  });
+  
   const averagePace = calculateAveragePace(deliveries);
   
   let html = `
@@ -224,7 +234,7 @@ function createEmailBody(formData) {
           <div>
             <div class="metric">
               <div class="metric-label">Total Deliveries</div>
-              <div class="metric-value">${totalDeliveries}</div>
+              <div class="metric-value">${cumulativeTotal}</div>
             </div>
             <div class="metric">
               <div class="metric-label">Average Pace</div>
@@ -237,45 +247,69 @@ function createEmailBody(formData) {
           <thead>
             <tr>
               <th>Checkpoint Time</th>
-              <th>Deliveries Completed</th>
-              <th>Incremental</th>
-              <th>Pace (stops/hr)</th>
+              <th>Period Deliveries</th>
+              <th>Cumulative Total</th>
+              <th>Period Pace (stops/hr)</th>
             </tr>
           </thead>
           <tbody>
   `;
   
-  // Add checkpoint data rows
-  let previousCount = 0;
+  // Add checkpoint data rows (using allCheckpoints defined earlier)
+  let cumulativeCount = 0;
   let previousTime = null;
   
-  checkpoints.forEach((checkpoint, index) => {
-    const count = formData.deliveries[checkpoint] || 0;
-    const incremental = count - previousCount;
+  allCheckpoints.forEach((checkpoint, index) => {
+    const hasData = formData.deliveries.hasOwnProperty(checkpoint) && 
+                   formData.deliveries[checkpoint] !== null &&
+                   formData.deliveries[checkpoint] !== '';
+    const periodDeliveries = hasData ? parseInt(formData.deliveries[checkpoint]) || 0 : null;
     
-    // Calculate pace for this interval
-    let pace = 0;
-    if (index > 0 && previousTime) {
-      const timeDiff = getTimeDifferenceInHours(previousTime, checkpoint);
-      pace = timeDiff > 0 ? Math.round(incremental / timeDiff) : 0;
+    if (hasData) {
+      cumulativeCount += periodDeliveries;
+      
+      // Calculate pace for this period
+      let pace = 0;
+      if (previousTime) {
+        const timeDiff = getTimeDifferenceInHours(previousTime, checkpoint);
+        pace = timeDiff > 0 ? Math.round(periodDeliveries / timeDiff) : 0;
+      } else {
+        // First checkpoint - calculate from start of day (8:00 AM)
+        const timeDiff = getTimeDifferenceInHours('8:00 AM', checkpoint);
+        pace = timeDiff > 0 ? Math.round(periodDeliveries / timeDiff) : 0;
+      }
+      
+      html += `
+        <tr>
+          <td>${checkpoint}</td>
+          <td>${periodDeliveries}</td>
+          <td>${cumulativeCount}</td>
+          <td>${pace > 0 ? pace : '-'}</td>
+        </tr>
+      `;
+      
+      previousTime = checkpoint;
+    } else {
+      // No data for this checkpoint - show as pending
+      html += `
+        <tr style="color: #999;">
+          <td>${checkpoint}</td>
+          <td>-</td>
+          <td>${cumulativeCount > 0 ? cumulativeCount : '-'}</td>
+          <td>-</td>
+        </tr>
+      `;
     }
-    
-    html += `
-      <tr>
-        <td>${checkpoint}</td>
-        <td>${count}</td>
-        <td>${incremental > 0 ? '+' + incremental : incremental}</td>
-        <td>${pace > 0 ? pace : '-'}</td>
-      </tr>
-    `;
-    
-    previousCount = count;
-    previousTime = checkpoint;
   });
   
   html += `
           </tbody>
         </table>
+        
+        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+          <em>Note: Period Deliveries shows packages delivered during each 2-hour period. 
+          Cumulative Total shows the running total for the day.</em>
+        </p>
   `;
   
   // Add notes if present
@@ -312,8 +346,9 @@ function createEmailBody(formData) {
   return html;
 }
 
+
 /**
- * Calculates average delivery pace across all checkpoints
+ * Calculates average delivery pace across all checkpoints (DEPRECATED - assumes cumulative values)
  * @param {Object} deliveries - Delivery counts by checkpoint
  * @returns {number} Average stops per hour
  */
@@ -324,17 +359,50 @@ function calculateAveragePace(deliveries) {
     return 0;
   }
   
-  const checkpoints = Object.keys(deliveries).filter(key => key && key.trim()).sort();
-  if (checkpoints.length < 2) {
-    console.log('Not enough checkpoints for pace calculation');
+  // Define checkpoint order
+  const checkpointOrder = ['1:40 PM', '3:40 PM', '5:40 PM', '7:40 PM', '9:40 PM'];
+  
+  // Get available checkpoints in order
+  const availableCheckpoints = checkpointOrder.filter(time => {
+    return deliveries[time] !== null && deliveries[time] !== undefined && deliveries[time] !== '';
+  });
+  
+  console.log('Available checkpoints:', availableCheckpoints);
+  console.log('Deliveries data:', deliveries);
+  
+  if (availableCheckpoints.length === 0) {
+    console.log('No checkpoint data available');
     return 0;
   }
   
-  const firstCheckpoint = checkpoints[0];
-  const lastCheckpoint = checkpoints[checkpoints.length - 1];
+  if (availableCheckpoints.length === 1) {
+    // If only one checkpoint, calculate pace from start of day (8 AM assumed)
+    const checkpoint = availableCheckpoints[0];
+    const deliveryCount = deliveries[checkpoint];
+    const hoursFromStart = getTimeDifferenceInHours('8:00 AM', checkpoint);
+    
+    console.log('Single checkpoint calculation:', {
+      checkpoint: checkpoint,
+      deliveries: deliveryCount,
+      hours: hoursFromStart
+    });
+    
+    return hoursFromStart > 0 ? Math.round(deliveryCount / hoursFromStart) : 0;
+  }
+  
+  // Multiple checkpoints - use first and last
+  const firstCheckpoint = availableCheckpoints[0];
+  const lastCheckpoint = availableCheckpoints[availableCheckpoints.length - 1];
   const totalDeliveries = deliveries[lastCheckpoint] || 0;
   
   const totalHours = getTimeDifferenceInHours(firstCheckpoint, lastCheckpoint);
+  
+  console.log('Multiple checkpoint calculation:', {
+    first: firstCheckpoint,
+    last: lastCheckpoint,
+    deliveries: totalDeliveries,
+    hours: totalHours
+  });
   
   return totalHours > 0 ? Math.round(totalDeliveries / totalHours) : 0;
 }
@@ -351,6 +419,10 @@ function getTimeDifferenceInHours(time1, time2) {
     console.error('Invalid time values:', { time1, time2 });
     return 0;
   }
+  
+  // Normalize time strings to remove any suffixes like "(End of Day)"
+  time1 = normalizeReportingTime(time1);
+  time2 = normalizeReportingTime(time2);
   
   const parseTime = (timeStr) => {
     // Ensure timeStr is a string and contains a space
@@ -415,10 +487,10 @@ function testDeliveryPaceEmail() {
     timestamp: new Date(),
     driverName: 'John Smith',
     deliveries: {
-      '1:40 PM': 45,
-      '3:40 PM': 89,
-      '5:40 PM': 134,
-      '7:40 PM': 178
+      '1:40 PM': 45,     // 45 delivered in first period
+      '3:40 PM': 44,     // 44 more delivered (cumulative: 89)
+      '5:40 PM': 45,     // 45 more delivered (cumulative: 134)
+      '7:40 PM': 44      // 44 more delivered (cumulative: 178)
     },
     notes: 'Heavy traffic on route. Delayed start due to vehicle inspection.'
   };
@@ -449,10 +521,10 @@ function debugTestDeliveryPaceEmail() {
       timestamp: new Date(),
       driverName: 'John Smith',
       deliveries: {
-        '1:40 PM': 45,
-        '3:40 PM': 89,
-        '5:40 PM': 134,
-        '7:40 PM': 178
+        '1:40 PM': 45,     // 45 delivered in first period
+        '3:40 PM': 44,     // 44 more delivered (cumulative: 89)
+        '5:40 PM': 45,     // 45 more delivered (cumulative: 134)
+        '7:40 PM': 44      // 44 more delivered (cumulative: 178)
       },
       notes: 'Heavy traffic on route. Delayed start due to vehicle inspection.'
     };
