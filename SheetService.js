@@ -145,15 +145,21 @@ function updateDailyDetails(spreadsheetId, resultsSheetName) {
   }
   
   var today = getTodayString();
+  var todayDate = new Date();
+  var weekNumber = getUSWeekNumber(todayDate);
+  
+  Logger.log("Allocation date: " + today + ", Week number: " + weekNumber);
   
   // Prepare new rows
   var newRows = [];
   var newUniqueIdentifiers = new Set();
+  var weekNumbers = [];
   
   for (var i = 1; i < resultsData.length; i++) {
     var r = resultsData[i];
     var newRow = [today, r[0], r[9], "", r[5]];
     newRows.push(newRow);
+    weekNumbers.push([weekNumber]); // Store week number for column F
     
     var uniqueIdentifier = r[10];
     if (uniqueIdentifier) {
@@ -185,10 +191,14 @@ function updateDailyDetails(spreadsheetId, resultsSheetName) {
   var numNewRows = newRows.length;
   
   var writeRange = dailyDetailsSheet.getRange(startRow, 1, numNewRows, 5);
+  var weekNumberRange = dailyDetailsSheet.getRange(startRow, 21, numNewRows, 1); // Column U (corrected from column 6/F)
   var uniqueIdWriteRange = dailyDetailsSheet.getRange(startRow, 22, numNewRows, 1);
   
   writeRange.clearDataValidations();
   writeRange.setValues(newRows);
+  
+  // Write week numbers to column F
+  weekNumberRange.setValues(weekNumbers);
   
   var uniqueIdValues = Array.from(newUniqueIdentifiers).map(function(id) { return [id]; });
   if (uniqueIdValues.length === numNewRows) {
@@ -259,7 +269,7 @@ function centerAlignDailyDetailsColumns(sheet, startRow, numRows) {
   centerAlignRange.setHorizontalAlignments(
     Array(numRows).fill(
       [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22].map(function(col) {
-        if ([1, 2, 3, 5, 22].includes(col)) {
+        if ([1, 2, 3, 5, 21, 22].includes(col)) {  // Corrected: col 21 for week number (not col 6)
           return "center";
         } else {
           return "left";

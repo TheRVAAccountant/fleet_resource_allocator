@@ -38,6 +38,25 @@ var CONFIG = {
     {time: 21.67, column: 16, label: "9:40 PM"}
   ],
   
+  // Daily Details Fields - Column indices (0-based)
+  DAILY_DETAILS_FIELDS: {
+    DATE: 0,             // Column A (index 0)
+    ROUTE_NUMBER: 1,     // Column B (index 1)
+    NAME: 2,             // Column C (index 2)
+    ASSET_ID: 3,         // Column D (index 3)
+    VAN_ID: 4,           // Column E (index 4)
+    WEEK_NUMBER: 20,     // Column U (index 20) - Fixed from incorrect index 5
+    UNIQUE_ID: 21        // Column V (index 21)
+  },
+  
+  // RTS (Return to Station) Fields - Column indices (0-based)
+  RTS_FIELDS: {
+    RTS_TIME: 16,        // Column Q (index 16)
+    PKG_DELIVERED: 17,   // Column R (index 17)
+    PKG_RETURNED: 18,    // Column S (index 18)
+    ROUTE_NOTES: 19      // Column T (index 19)
+  },
+  
   // Van Type Mappings
   VAN_TYPE_MAPPING: {
     "Standard Parcel - Extra Large Van - US": "Extra Large",
@@ -53,7 +72,9 @@ var CONFIG = {
     UPLOAD_DIALOG_WIDTH: 550,
     UPLOAD_DIALOG_HEIGHT: 650,
     UPDATE_VAN_DIALOG_WIDTH: 400,
-    UPDATE_VAN_DIALOG_HEIGHT: 300
+    UPDATE_VAN_DIALOG_HEIGHT: 300,
+    RTS_FORM_WIDTH: 600,
+    RTS_FORM_HEIGHT: 800
   },
   
   // Email Settings
@@ -62,6 +83,12 @@ var CONFIG = {
   // Form Settings
   FORM_SETTINGS: {
     FILTER_VANS_BY_ASSIGNMENT: true  // If true, only show vans assigned today in forms
+  },
+  
+  // Development Settings
+  DEV_SETTINGS: {
+    USE_MOCK_DATA: false,  // Set to true only for testing/development
+    MOCK_DATA_ENABLED_VANS: []  // Specific vans to use mock data for (empty = none)
   }
 };
 
