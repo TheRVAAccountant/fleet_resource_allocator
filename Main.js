@@ -13,12 +13,19 @@
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   
-  // Create the basic menu with initialization option
+  // Main vehicle assignment menu - exactly as in the working version
   ui.createMenu("Vehicle Assignment Tool")
     .addItem("Upload Files for Allocation", "showUploadDialog")
-    .addSeparator()
-    .addItem("Initialize All Menus", "initializeAllMenus")
     .addToUi();
+  
+  // Also add a custom menu item to the Add-ons menu
+  try {
+    ui.createAddonMenu()
+      .addItem('Setup All Menus', 'setupMenus')
+      .addToUi();
+  } catch (e) {
+    // This might fail in some contexts
+  }
 }
 
 /**
@@ -83,6 +90,14 @@ function initializeAllMenus() {
       'Some menus could not be created. Error: ' + error.toString(), 
       ui.ButtonSet.OK);
   }
+}
+
+/**
+ * Manual setup function - Run this from Script Editor if menus don't appear
+ * Go to Extensions > Apps Script > Select setupMenus > Click Run
+ */
+function setupMenus() {
+  initializeAllMenus();
 }
 
 /**
