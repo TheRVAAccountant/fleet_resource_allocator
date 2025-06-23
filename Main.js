@@ -11,51 +11,107 @@
  * Sets up the application menus.
  */
 function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  
+  // SIMPLEST POSSIBLE APPROACH - One menu, no submenus, no try-catch
+  ui.createMenu("Vehicle Assignment Tool")
+    .addItem("Upload Files for Allocation", "showUploadDialog")
+    .addToUi();
+  
+  // Try to add a second simple menu
+  ui.createMenu("Fleet Operations")
+    .addItem("Run Diagnostics", "runDiagnostics")
+    .addItem("Create All Menus", "forceCreateAllMenus")
+    .addToUi();
+}
+
+/**
+ * Run diagnostics to understand why menus aren't appearing
+ */
+function runDiagnostics() {
+  var ui = SpreadsheetApp.getUi();
+  var report = [];
+  
+  report.push("=== MENU CREATION DIAGNOSTICS ===");
+  report.push("Time: " + new Date().toString());
+  report.push("");
+  
+  // Test 1: Check if we can create a test menu
   try {
-    var ui = SpreadsheetApp.getUi();
-    
-    // Create the main menu with all options in submenus
-    ui.createMenu("Fleet Resource Allocator")
-      .addItem("Upload Files for Allocation", "showUploadDialog")
-      .addSeparator()
-      .addSubMenu(ui.createMenu("Delivery Pace")
-        .addItem("Initialize Headers", "initializeDeliveryPaceHeaders")
-        .addItem("Update Today's Pace", "updateDeliveryPaceForToday")
-        .addItem("Generate Today's Summary", "generateTodaysSummary")
-        .addItem("Update Specific Van", "showUpdateVanDialog")
-        .addItem("Setup Auto-Update Triggers", "setupDeliveryPaceTriggers")
-        .addItem("Test Update", "testDeliveryPaceUpdate"))
-      .addSeparator()
-      .addSubMenu(ui.createMenu("Reports")
-        .addItem("Vehicle Utilization", "generateVehicleUtilizationReport")
-        .addItem("Driver Performance", "generateDriverPerformanceReport")
-        .addItem("Weekly Summary", "generateWeeklySummaryReport")
-        .addItem("Analytics Dashboard", "showAnalyticsDashboard")
-        .addItem("Export All Data", "exportAllData"))
-      .addSeparator()
-      .addSubMenu(ui.createMenu("Forms & Admin")
-        .addItem("Delivery Pace Form", "showDeliveryPaceForm")
-        .addItem("RTS Report", "showRTSForm")
-        .addItem("Form Management", "showFormManagement")
-        .addItem("View Error Log", "showErrorLog"))
-      .addSeparator()
-      .addSubMenu(ui.createMenu("Help")
-        .addItem("User Guide", "showUserGuide")
-        .addItem("About", "showAbout"))
+    ui.createMenu("Test Menu")
+      .addItem("Test Item", "showUploadDialog")
       .addToUi();
-      
-  } catch (error) {
-    // If the full menu fails, create a minimal menu
-    try {
-      SpreadsheetApp.getUi()
-        .createMenu("Fleet Tools")
-        .addItem("Upload Files", "showUploadDialog")
-        .addItem("Initialize All Functions", "initializeAllFunctions")
-        .addToUi();
-    } catch (e) {
-      // Even the minimal menu failed - log the error
-      console.log("Menu creation failed: " + e.toString());
+    report.push("✓ Can create menus");
+  } catch (e) {
+    report.push("✗ Cannot create menus: " + e.toString());
+  }
+  
+  // Test 2: Check key functions
+  var functions = [
+    "showUploadDialog",
+    "initializeDeliveryPaceHeaders", 
+    "updateDeliveryPaceForToday",
+    "getConfig",
+    "mainAllocation"
+  ];
+  
+  report.push("");
+  report.push("Function Check:");
+  functions.forEach(function(fn) {
+    if (typeof this[fn] === 'function') {
+      report.push("✓ " + fn + " exists");
+    } else {
+      report.push("✗ " + fn + " is missing");
     }
+  });
+  
+  // Test 3: Check script properties
+  report.push("");
+  report.push("Script Properties:");
+  try {
+    var props = PropertiesService.getScriptProperties().getKeys();
+    report.push("Properties found: " + props.length);
+  } catch (e) {
+    report.push("Cannot access properties: " + e.toString());
+  }
+  
+  // Show results
+  ui.alert("Diagnostic Results", report.join("\n"), ui.ButtonSet.OK);
+}
+
+/**
+ * Force create all menus - bypass onOpen
+ */
+function forceCreateAllMenus() {
+  var ui = SpreadsheetApp.getUi();
+  
+  try {
+    // Create each menu individually
+    ui.createMenu("Vehicle Assignment")
+      .addItem("Upload Files", "showUploadDialog")
+      .addToUi();
+    
+    ui.createMenu("Delivery Pace")
+      .addItem("Initialize Headers", "initializeDeliveryPaceHeaders")
+      .addItem("Update Today's Pace", "updateDeliveryPaceForToday")
+      .addItem("Generate Summary", "generateTodaysSummary")
+      .addToUi();
+    
+    ui.createMenu("Reports")
+      .addItem("Vehicle Utilization", "generateVehicleUtilizationReport")
+      .addItem("Driver Performance", "generateDriverPerformanceReport")
+      .addItem("Export All Data", "exportAllData")
+      .addToUi();
+    
+    ui.createMenu("Administration")
+      .addItem("View Error Log", "showErrorLog")
+      .addItem("Form Management", "showFormManagement")
+      .addToUi();
+    
+    ui.alert("Success", "All menus have been created. You may need to refresh the spreadsheet to see them all.", ui.ButtonSet.OK);
+    
+  } catch (error) {
+    ui.alert("Error", "Failed to create menus: " + error.toString(), ui.ButtonSet.OK);
   }
 }
 
