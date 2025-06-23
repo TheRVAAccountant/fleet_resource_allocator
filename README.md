@@ -84,14 +84,36 @@ The Fleet Resource Allocator is a Google Apps Script application that automates 
 ## Troubleshooting
 
 ### Menus Not Appearing
-1. Refresh the spreadsheet (Ctrl+R or Cmd+R)
-2. Look for the **Vehicle Assignment Tool** menu
-3. Click **Vehicle Assignment Tool** → **Initialize All Menus**
-4. Wait for the success message
-5. All menus should now appear (Delivery Pace, Fleet Operations, Reports, Help)
-6. If menus still don't appear, refresh the spreadsheet again
 
-**Note**: Due to Google Apps Script loading behavior, menus must be initialized manually the first time.
+If you only see "Vehicle Assignment Tool" menu or no menus at all:
+
+#### Method 1: Check for the Main Menu
+1. Refresh the spreadsheet (Ctrl+R or Cmd+R)
+2. Look for **"Fleet Resource Allocator"** menu
+3. All features are organized under this single menu with submenus
+4. If you don't see it, try Method 2
+
+#### Method 2: Run Menu Setup from Script Editor
+1. Go to **Extensions → Apps Script**
+2. Find **MenuTest.js** in the file list
+3. Click on any function:
+   - `createMinimalMenu()` - Creates a basic menu
+   - `testBasicMenu()` - Tests if menus can be created
+   - `checkRequiredFiles()` - Checks if all files are loaded
+4. Click the **Run** button (▶️)
+5. Return to your spreadsheet
+
+#### Method 3: Manual Menu Creation
+1. In Script Editor, find **Main.js**
+2. Look for the function `createBasicMenus()`
+3. Click inside the function
+4. Click **Run**
+5. This creates separate menus for each feature
+
+#### If Nothing Works
+1. Run `debugGlobalScope()` from MenuTest.js to see what's loaded
+2. Run `initializeAllFunctions()` from Main.js to see what's missing
+3. Check the Execution log for errors
 
 ### Allocation Errors
 1. Check that your Excel files have the correct sheet names:
