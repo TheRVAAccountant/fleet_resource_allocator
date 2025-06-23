@@ -11,18 +11,113 @@
  * Sets up the application menus.
  */
 function onOpen() {
+  try {
+    setupAllMenus();
+  } catch (error) {
+    // Fallback to basic menu
+    SpreadsheetApp.getUi()
+      .createMenu("Fleet System")
+      .addItem("Initialize System", "initializeSystem")
+      .addItem("Show Error", "showLastError")
+      .addToUi();
+    
+    // Store error for debugging
+    PropertiesService.getScriptProperties().setProperty('lastMenuError', error.toString());
+  }
+}
+
+/**
+ * Set up all application menus
+ */
+function setupAllMenus() {
   var ui = SpreadsheetApp.getUi();
   
-  // SIMPLEST POSSIBLE APPROACH - One menu, no submenus, no try-catch
-  ui.createMenu("Vehicle Assignment Tool")
-    .addItem("Upload Files for Allocation", "showUploadDialog")
+  // Main menu - Fleet Resource Allocator
+  ui.createMenu('Fleet Resource Allocator')
+    .addItem('Upload Files for Allocation', 'showUploadDialog')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Quick Actions')
+      .addItem('Check Vehicle Status', 'showVehicleStatus')
+      .addItem('View Daily Details', 'showDailyDetails')
+      .addItem('Generate Report', 'quickReport'))
     .addToUi();
   
-  // Try to add a second simple menu
-  ui.createMenu("Fleet Operations")
-    .addItem("Run Diagnostics", "runDiagnostics")
-    .addItem("Create All Menus", "forceCreateAllMenus")
+  // Delivery Pace menu
+  ui.createMenu('Delivery Pace')
+    .addItem('Initialize Headers', 'initializeDeliveryPaceHeaders')
+    .addItem('Update Today\'s Pace', 'updateDeliveryPaceForToday')
+    .addItem('Generate Today\'s Summary', 'generateTodaysSummary')
+    .addSeparator()
+    .addItem('Update Specific Van', 'showUpdateVanDialog')
+    .addItem('Setup Auto-Update Triggers', 'setupDeliveryPaceTriggers')
+    .addItem('Test Update', 'testDeliveryPaceUpdate')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Form Management')
+      .addItem('Create/Update Collection Form', 'createDeliveryForm')
+      .addItem('Get Form Link & QR Code', 'showFormInfo')
+      .addItem('Setup Form Trigger', 'setupFormSubmitTrigger')
+      .addItem('Test Van Filtering', 'testFormVanFiltering'))
     .addToUi();
+  
+  // Reports menu
+  ui.createMenu('Reports')
+    .addItem('Vehicle Utilization Report', 'generateVehicleUtilizationReport')
+    .addItem('Driver Performance Report', 'generateDriverPerformanceReport')
+    .addItem('Weekly Summary Report', 'generateWeeklySummaryReport')
+    .addSeparator()
+    .addItem('Analytics Dashboard', 'showAnalyticsDashboard')
+    .addItem('Export All Data', 'exportAllData')
+    .addToUi();
+  
+  // Forms menu
+  ui.createMenu('Forms')
+    .addItem('Delivery Pace Form', 'showDeliveryPaceForm')
+    .addItem('RTS Form', 'showRTSForm')
+    .addSeparator()
+    .addItem('Form Management', 'showFormManagement')
+    .addToUi();
+  
+  // Administration menu
+  ui.createMenu('Administration')
+    .addItem('Dashboard', 'showDashboard')
+    .addItem('View Error Log', 'showErrorLog')
+    .addItem('Clear Error Log', 'clearErrorLog')
+    .addSeparator()
+    .addItem('Test Logger', 'testLogger')
+    .addItem('Run Diagnostics', 'runDiagnostics')
+    .addItem('Initialize All Functions', 'initializeAllFunctions')
+    .addSeparator()
+    .addItem('User Guide', 'showUserGuide')
+    .addItem('About', 'showAbout')
+    .addToUi();
+}
+
+/**
+ * Initialize system - fallback function
+ */
+function initializeSystem() {
+  try {
+    setupAllMenus();
+    SpreadsheetApp.getUi().alert(
+      'System Initialized',
+      'All menus have been created. Please refresh the spreadsheet.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (error) {
+    SpreadsheetApp.getUi().alert(
+      'Initialization Error',
+      'Error: ' + error.toString(),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * Show last menu creation error
+ */
+function showLastError() {
+  var error = PropertiesService.getScriptProperties().getProperty('lastMenuError') || 'No error recorded';
+  SpreadsheetApp.getUi().alert('Last Menu Error', error, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /**
@@ -556,6 +651,128 @@ function exportAllData() {
     }
   } catch (error) {
     SpreadsheetApp.getUi().alert('Error exporting data: ' + error.toString());
+  }
+}
+
+/**
+ * Show vehicle status - quick view of operational vehicles
+ */
+function showVehicleStatus() {
+  try {
+    var logger = createLogger('Main');
+    logger.info('Showing vehicle status');
+    
+    var ss = SpreadsheetApp.openById(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'));
+    var vehicleSheet = ss.getSheetByName('Vehicle Status');
+    
+    if (!vehicleSheet) {
+      SpreadsheetApp.getUi().alert('Vehicle Status sheet not found.');
+      return;
+    }
+    
+    var data = vehicleSheet.getDataRange().getValues();
+    var operational = 0;
+    var nonOperational = 0;
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][2] === 'Y') operational++;
+      else if (data[i][2] === 'N') nonOperational++;
+    }
+    
+    SpreadsheetApp.getUi().alert(
+      'Vehicle Status',
+      'Total Vehicles: ' + (data.length - 1) + '\n' +
+      'Operational: ' + operational + '\n' +
+      'Non-Operational: ' + nonOperational,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * Show daily details - quick view of today's allocations
+ */
+function showDailyDetails() {
+  try {
+    var logger = createLogger('Main');
+    logger.info('Showing daily details');
+    
+    var ss = SpreadsheetApp.openById(getConfig('DAILY_SUMMARY_SPREADSHEET_ID'));
+    var dailySheet = ss.getSheetByName('Daily Details');
+    
+    if (!dailySheet) {
+      SpreadsheetApp.getUi().alert('Daily Details sheet not found.');
+      return;
+    }
+    
+    var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM/dd/yyyy');
+    var data = dailySheet.getDataRange().getValues();
+    var todayCount = 0;
+    
+    for (var i = 1; i < data.length; i++) {
+      var dateStr = Utilities.formatDate(new Date(data[i][0]), Session.getScriptTimeZone(), 'MM/dd/yyyy');
+      if (dateStr === today) todayCount++;
+    }
+    
+    SpreadsheetApp.getUi().alert(
+      'Daily Details',
+      'Date: ' + today + '\n' +
+      'Routes Allocated Today: ' + todayCount + '\n' +
+      'Total Historical Records: ' + (data.length - 1),
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * Generate quick report
+ */
+function quickReport() {
+  try {
+    var logger = createLogger('Main');
+    logger.info('Generating quick report');
+    
+    SpreadsheetApp.getUi().alert(
+      'Quick Report',
+      'This feature will generate a quick summary report.\n\nComing soon!',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * Setup form submit trigger
+ */
+function setupFormSubmitTrigger() {
+  try {
+    SpreadsheetApp.getUi().alert(
+      'Form Trigger Setup',
+      'This will set up automatic processing of form submissions.\n\nComing soon!',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
+  }
+}
+
+/**
+ * Test form van filtering
+ */
+function testFormVanFiltering() {
+  try {
+    SpreadsheetApp.getUi().alert(
+      'Van Filtering Test',
+      'This will test the van filtering functionality in forms.\n\nComing soon!',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('Error: ' + error.toString());
   }
 }
 
