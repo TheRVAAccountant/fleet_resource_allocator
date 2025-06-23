@@ -1,0 +1,36 @@
+# Ignore backup files
+*.backup
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore clasp config
+.clasp.json
+.claspignore
+
+# Ignore node modules if any
+node_modules/
+
+# Ignore documentation files
+*.md
+README.md
+CLAUDE.md
+
+# Ignore test files that shouldn't be in production (except TestMenuSystem.js)
+# *Test*.js
+# *test*.js
+
+# Ignore any local development files
+.env
+.DS_Store
+
+# Temporarily ignore files with ES6 syntax until they can be fixed
+AnalyticsService.js
+DataExportService.js
+DevTools.js
+SmartDefaults.js
+UIHelpers.js
+DashboardService.js
+TestRunner.js
+RTSService.js
